@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — Validation Feed</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <style>
+    /* ==========================================================================
+       CORE ENGINE THEME ENGINE MATRIX: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+      --btn-text: #ffffff;
+      --card-bg: #ffffff;
+      --text-muted: #555555;
+      --nav-active: #111111;
+      --nav-active-text: #ffffff;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #ca8a04; 
+      --radius: 8px; 
+      --font: monospace;
+      --brand-color: #fef08a;
+      --btn-text: #000000;
+      --card-bg: rgba(30, 4, 60, 0.6);
+      --text-muted: #a16207;
+      --nav-active: #eab308;
+      --nav-active-text: #0b0117;
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --text: #f8fafc; 
+      --accent: #38bdf8; 
+      --border: #334155; 
+      --radius: 16px; 
+      --font: system-ui, -apple-system, sans-serif;
+      --brand-color: #38bdf8;
+      --btn-text: #0f172a;
+      --card-bg: #1e293b;
+      --text-muted: #94a3b8;
+      --nav-active: #38bdf8;
+      --nav-active-text: #0f172a;
+    }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font); 
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
+    .glass-card { 
+      background: var(--card-bg); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+    }
+    .text-muted { color: var(--text-muted); }
+    
+    .nav-btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card-bg);
+    }
+    .nav-btn:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+    .nav-btn.active {
+      background: var(--nav-active);
+      color: var(--nav-active-text);
+      font-weight: 900;
+      border-color: var(--nav-active);
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .feed-item { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <nav class="w-full flex flex-wrap gap-2 p-2 glass-card items-center justify-start overflow-x-auto shadow-md">
+      <a href="dashboard.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">🏠 Home</a>
+      <a href="report.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">📢 Report</a>
+      <a href="feed.html" class="nav-btn active px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">📰 Feed</a>
+      <a href="riskmap.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">🗺️ RiskMap</a>
+      <a href="aiagents.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">🤖 AI Agents</a>
+      <a href="studio.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">🎨 Studio</a>
+      <a href="leaderboard.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">🏆 Leaderboard</a>
+      <a href="profile.html" class="nav-btn px-3 py-2 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap ml-auto">👤 Profile</a>
+    </nav>
+
+    <div class="w-full flex flex-wrap justify-between items-center p-4 glass-card gap-4 shadow-sm">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider">Design Era:</span>
+        <button onclick="setGlobalEra('90s')" class="px-2 py-1 border text-[11px] font-bold rounded hover:opacity-80 transition" style="border-color: var(--border);">90s</button>
+        <button onclick="setGlobalEra('y2k')" class="px-2 py-1 border text-[11px] font-bold rounded hover:opacity-80 transition" style="border-color: var(--border);">Y2K</button>
+        <button onclick="setGlobalEra('modern')" class="px-2 py-1 border text-[11px] font-bold rounded hover:opacity-80 transition" style="border-color: var(--border);">Modern</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider">Language:</span>
+        <button onclick="changeGlobalLanguage('en')" class="px-3 py-1 border text-[11px] font-bold rounded hover:opacity-80 transition" style="border-color: var(--border);">EN</button>
+        <button onclick="changeGlobalLanguage('hi')" class="px-3 py-1 border text-[11px] font-bold rounded hover:opacity-80 transition" style="border-color: var(--border);">हिन्दी</button>
+      </div>
+    </div>
+
+    <header class="flex justify-between items-center pb-4 border-b border-current/10" style="border-color: var(--border);">
+      <div>
+        <h1 class="text-2xl font-black uppercase tracking-tight" id="txt-title">Risk Analysis Feed</h1>
+        <p class="text-xs text-muted" id="txt-subtitle">Live public audit and triage matrix tracking local incidents.</p>
+      </div>
+    </header>
+
+    <div id="feed-container" class="space-y-4">
+      <div class="text-center p-8 text-muted font-mono text-xs">Connecting securely to active regional data streams...</div>
+    </div>
+  </div>
+
+  <script>
+    const translations = {
+      en: {
+        title: "Risk Analysis Feed",
+        subtitle: "Live public audit and triage matrix tracking local incidents.",
+        empty: "No hazards logged on active coordinates. Pipeline completely clear.",
+        voteLabel: "Upvote",
+        votedLabel: "Upvoted",
+        verifyBtn: "Verify Threat",
+        mockNotice: "⚠️ SIMULATED MOCK DATA"
+      },
+      hi: {
+        title: "जोखिम विश्लेषण फ़ीड",
+        subtitle: "स्थानीय समस्याओं की लाइव सार्वजनिक ऑडिट और ट्राइएज मैट्रिक्स ट्रैकिंग।",
+        empty: "सक्रिय निर्देशांक पर कोई समस्या दर्ज नहीं है। पाइपलाइन पूरी तरह से स्पष्ट है।",
+        voteLabel: "वोट दें",
+        votedLabel: "वोट दिया है",
+        verifyBtn: "पुष्टि करें",
+        mockNotice: "⚠️ सिम्युलेटेड मॉक डेटा प्रविष्टि"
+      }
+    };
+
+    let currentLang = 'en';
+    let globalSnapshotData = null;
+
+    function setGlobalEra(era) {
+      document.documentElement.setAttribute('data-theme', era);
+      localStorage.setItem('streetvoice_era_theme', era);
+    }
+
+    function changeGlobalLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+      updateStaticLabels();
+      renderFeedFromSnapshot();
+    }
+
+    function updateStaticLabels() {
+      const dict = translations[currentLang] || translations.en;
+      document.getElementById("txt-title").textContent = dict.title;
+      document.getElementById("txt-subtitle").textContent = dict.subtitle;
+    }
+
+    // Retrieve ledger configuration array from local system
+    function getVotedLedger() {
+      try {
+        return JSON.parse(localStorage.getItem('streetvoice_voted_reports')) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function listenToFirebaseFeed() {
+      if (!window.db) {
+        document.getElementById("feed-container").innerHTML = `<div class="text-red-500 p-4 font-mono text-xs">Error: Configuration file offline.</div>`;
+        return;
+      }
+
+      db.ref('reports').on('value', (snapshot) => {
+        const data = snapshot.val();
+        
+        // Automated Silent Fallback Seed Optimization Loop
+        if (!data) {
+          console.log("No existing data nodes found on stream. Seeding 12 mock presentation objects silently...");
+          seedMockPresentationData();
+          return;
+        }
+
+        globalSnapshotData = data;
+        renderFeedFromSnapshot();
+      });
+    }
+
+    function renderFeedFromSnapshot() {
+      const container = document.getElementById("feed-container");
+      if (!container) return;
+      container.innerHTML = ""; 
+
+      const dict = translations[currentLang] || translations.en;
+      const votedLedger = getVotedLedger();
+
+      if (!globalSnapshotData) {
+        container.innerHTML = `<div class="text-center p-12 text-muted font-mono text-xs">${dict.empty}</div>`;
+        return;
+      }
+
+      const list = Object.keys(globalSnapshotData).map(key => ({ id: key, ...globalSnapshotData[key] }))
+                           .sort((a, b) => b.timestamp - a.timestamp);
+
+      list.forEach((report, index) => {
+        let badgeColor = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+        if (report.severity === "MEDIUM") badgeColor = "bg-amber-500/20 text-amber-400 border-amber-500/30";
+        if (report.severity === "HIGH") badgeColor = "bg-orange-500/20 text-orange-400 border-orange-500/30";
+        if (report.severity === "CRITICAL") badgeColor = "bg-red-500/20 text-red-400 border-red-500/40 animate-pulse";
+
+        const hasVoted = votedLedger.includes(report.id);
+
+        const card = document.createElement("div");
+        card.className = "p-5 glass-card feed-item flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg";
+        card.style.animationDelay = `${index * 0.02}s`;
+
+        card.innerHTML = `
+          <div class="space-y-2 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2 py-0.5 border text-[10px] font-black uppercase tracking-wider rounded ${badgeColor}">
+                ${report.severity || 'LOW'} [${report.severityScore || '0'}/100]
+              </span>
+              <span class="px-2 py-0.5 border text-[10px] font-mono text-amber-500 border-amber-500/30 rounded bg-amber-500/5 font-bold">
+                ${dict.mockNotice}
+              </span>
+              <span class="text-[10px] font-bold opacity-60 font-mono tracking-tight">Loc: ${report.location || 'MUMBAI'}</span>
+              <span class="text-[10px] opacity-40 font-mono ml-auto md:ml-0">${new Date(report.timestamp).toLocaleTimeString()}</span>
+            </div>
+            <h3 class="text-base font-bold tracking-tight">${report.category}</h3>
+            <p class="text-xs text-muted leading-relaxed max-w-2xl">${report.desc}</p>
+            <div class="text-[10px] font-mono text-sky-400">Route Assignment: ${report.suggestedDepartment || 'UNASSIGNED'}</div>
+          </div>
+          
+          <div class="flex md:flex-col items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-current/10" style="border-color: var(--border);">
+            <button 
+              onclick="upvoteReport('${report.id}', ${report.votes || 0})" 
+              ${hasVoted ? 'disabled' : ''}
+              class="flex-1 md:w-28 text-center py-2 px-3 text-[11px] font-bold rounded-md transition border flex items-center justify-center gap-1
+                     ${hasVoted ? 'bg-slate-800/40 text-slate-500 border-slate-700/50 cursor-not-allowed opacity-50' : 'bg-white/5 hover:bg-white/10'}" 
+              style="${hasVoted ? '' : 'border-color: var(--border);'}">
+              ▲ ${hasVoted ? dict.votedLabel : dict.voteLabel} (${report.votes || 0})
+            </button>
+            <button onclick="verifyIncident('${report.id}')" class="flex-1 md:w-28 text-center py-2 px-3 text-[11px] font-black uppercase tracking-wider rounded-md bg-cyan-500 hover:bg-cyan-600 text-slate-950 shadow transition">
+              ✓ ${dict.verifyBtn}
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function upvoteReport(id, currentVotes) {
+      if (!window.db) return;
+      
+      const votedLedger = getVotedLedger();
+      if (votedLedger.includes(id)) return; // Escape injection loops
+
+      // Push ID record into active browser tracking configuration array
+      votedLedger.push(id);
+      localStorage.setItem('streetvoice_voted_reports', JSON.stringify(votedLedger));
+
+      // Execute transaction delta modifications on database target
+      db.ref(`reports/${id}`).update({ votes: currentVotes + 1 });
+    }
+
+    function verifyIncident(id) {
+      alert(`Incident vector verification committed for ID: ${id}`);
+    }
+
+    function seedMockPresentationData() {
+      const mockIncidents = [
+        {
+          category: "Structural Road Failure",
+          desc: "Massive pothole cluster across the left-bound lane causing severe vehicle deceleration matrices and minor axel damage.",
+          location: "BANDRA WEST", lat: 19.0544, lng: 72.8294, severity: "HIGH", severityScore: 82,
+          suggestedDepartment: "MCD-ROADS-DEPT", timestamp: Date.now() - 7200000, urgent: true, user: "SV-CITIZEN-77", votes: 14
+        },
+        {
+          category: "Electrical Substation Outage",
+          desc: "Exposed industrial wire bundle hanging low over a water-logged pedestrian footpath. High electrocution risk vector.",
+          location: "ANDHERI EAST", lat: 19.1176, lng: 72.8631, severity: "CRITICAL", severityScore: 96,
+          suggestedDepartment: "POWER-GRID-DISTRIBUTION", timestamp: Date.now() - 1800000, urgent: true, user: "SV-CITIZEN-102", votes: 45
+        },
+        {
+          category: "Sanitation & Waste Overflow",
+          desc: "Commercial refuse container breached completely. Solid waste blocks storm runoff line, causing local alleyway flooding.",
+          location: "DHARAVI NAKU", lat: 19.0380, lng: 72.8538, severity: "MEDIUM", severityScore: 54,
+          suggestedDepartment: "CIVIC-HYGIENE-MGMT", timestamp: Date.now() - 14400000, urgent: false, user: "SV-ANON-NODE", votes: 3
+        },
+        {
+          category: "Open Drainage Breach",
+          desc: "Manhole cast-iron lid displaced entirely near the main market entry intersection, causing acute safety hazards.",
+          location: "COLABA CAUSEWAY", lat: 18.9218, lng: 72.8347, severity: "CRITICAL", severityScore: 91,
+          suggestedDepartment: "WASTEWATER-UTILITIES", timestamp: Date.now() - 600000, urgent: true, user: "SV-CITIZEN-09", votes: 28
+        },
+        {
+          category: "Public Utility Asset Damage",
+          desc: "Broken public fresh-water pipeline fountain flooding main thoroughfare access alleyway since early morning.",
+          location: "DADAR TRAM-TERMINUS", lat: 19.0178, lng: 72.8478, severity: "LOW", severityScore: 38,
+          suggestedDepartment: "HYDRO-RESOURCES", timestamp: Date.now() - 28800000, urgent: false, user: "SV-CITIZEN-41", votes: 9
+        },
+        {
+          category: "Traffic Signal Grid Defect",
+          desc: "Main cluster signals frozen on solid red loops across all intersections, forcing severe commuter lockups.",
+          location: "WORLI NAKA", lat: 19.0030, lng: 72.8170, severity: "HIGH", severityScore: 78,
+          suggestedDepartment: "TRAFFIC-CONTROL-INFRA", timestamp: Date.now() - 5400000, urgent: true, user: "SV-CITIZEN-88", votes: 19
+        },
+        {
+          category: "Structural Bridge Crack",
+          desc: "Visible structural concrete shearing and deep fissure anomalies emerging on the primary eastern flyover underpass.",
+          location: "KURLA EAST", lat: 19.0650, lng: 72.8794, severity: "CRITICAL", severityScore: 98,
+          suggestedDepartment: "CIVIL-ENG-AUDITS", timestamp: Date.now() - 900000, urgent: true, user: "SV-CITIZEN-12", votes: 64
+        },
+        {
+          category: "Illegal Debris Dumping",
+          desc: "Massive pile of concrete rubble and construction debris dropped overnight blocking the community park pathway.",
+          location: "POWAI LAKE LINK", lat: 19.1264, lng: 72.9065, severity: "LOW", severityScore: 25,
+          suggestedDepartment: "CIVIC-HYGIENE-MGMT", timestamp: Date.now() - 32400000, urgent: false, user: "SV-ANON-NODE", votes: 2
+        },
+        {
+          category: "Toxic Chemical Spillage",
+          desc: "Oily industrial effluent drums leaked unidentified fluid slick spreading across the active commercial marketplace avenue.",
+          location: "THANE REEFS", lat: 19.2184, lng: 72.9782, severity: "HIGH", severityScore: 88,
+          suggestedDepartment: "HAZMAT-ENVIRONMENT-CORP", timestamp: Date.now() - 4200000, urgent: true, user: "SV-CITIZEN-56", votes: 31
+        },
+        {
+          category: "Collapsed Safety Railing",
+          desc: "Pedestrian protective perimeter fencing damaged and leaning directly into the train track right-of-way corridor.",
+          location: "SION STATION VECTOR", lat: 19.0392, lng: 72.8619, severity: "HIGH", severityScore: 80,
+          suggestedDepartment: "RAILWAY-TRANSIT-AUTHORITY", timestamp: Date.now() - 10800000, urgent: true, user: "SV-CITIZEN-204", votes: 22
+        },
+        {
+          category: "Mains Gas Pipeline Leak",
+          desc: "Acre hiss noises and noticeable pressure loss anomalies reported near underground utility junctions.",
+          location: "CHEMBUR NUCLEUS", lat: 19.0622, lng: 72.8974, severity: "CRITICAL", severityScore: 95,
+          suggestedDepartment: "NATURAL-GAS-GRID", timestamp: Date.now() - 300000, urgent: true, user: "SV-CITIZEN-119", votes: 73
+        },
+        {
+          category: "Fallen Tree Obstruction",
+          desc: "Large mature banyan branch collapsed clean across the service road layer, severing localized telecommunication paths.",
+          location: "MALAD OVERPASS", lat: 19.1864, lng: 72.8484, severity: "MEDIUM", severityScore: 62,
+          suggestedDepartment: "PARKS-FORESTRY-RESCUE", timestamp: Date.now() - 16200000, urgent: false, user: "SV-CITIZEN-04", votes: 11
+        }
+      ];
+
+      const promises = mockIncidents.map(inc => db.ref('reports').push().set(inc));
+      Promise.all(promises).catch(err => console.error("Database initialization seed aborted:", err));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setGlobalEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
+      currentLang = localStorage.getItem('streetvoice_lang') || 'en';
+      updateStaticLabels();
+      listenToFirebaseFeed();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreetVoice - Impact Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    html[data-theme="modern"] body { background: #0f0e11; color: #fff7f2; }
+    html[data-theme="modern"] .glass {
+      background: rgba(25, 22, 28, 0.7);
+      border: 1px solid rgba(255, 181, 157, 0.15);
+      backdrop-filter: blur(16px);
+    }
+    html[data-theme="modern"] .brand-text { color: #ffb59d; }
+    html[data-theme="modern"] .accent { background: #ff6b35; color: #390c00; font-weight: 800; }
+    html[data-theme="modern"] .accent:hover { background: #ff875c; transform: translateY(-1px); }
+    html[data-theme="modern"] .soft-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); }
+    html[data-theme="modern"] .nav-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff7f2; }
+    html[data-theme="modern"] .nav-btn:hover { background: rgba(255, 107, 53, 0.2); border-color: #ff6b35; }
+    html[data-theme="modern"] .tooltip-box { background: #1a1620; color: #fff7f2; border: 1px solid rgba(255, 181, 157, 0.3); }
+
+    html[data-theme="y2k"] body { background: linear-gradient(135deg, #1f053a 0%, #0b0117 100%); color: #fef08a; }
+    html[data-theme="y2k"] .glass {
+      background: rgba(24, 3, 48, 0.85); border: 2px solid #eab308;
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.15); border-radius: 20px !important; backdrop-filter: blur(20px);
+    }
+    html[data-theme="y2k"] .brand-text { color: #eab308; font-weight: 900; text-shadow: 0 0 8px rgba(234,179,8,0.3); }
+    html[data-theme="y2k"] .accent { background: #eab308; color: #1e003b; border-radius: 12px !important; font-weight: 900; }
+    html[data-theme="y2k"] .accent:hover { background: #facc15; transform: scale(1.01); }
+    html[data-theme="y2k"] .soft-card { background: rgba(234, 179, 8, 0.05); border: 1px dashed #eab308; border-radius: 14px !important; }
+    html[data-theme="y2k"] .nav-btn { background: #0b0117; border: 2px solid #eab308; color: #eab308; border-radius: 12px; }
+    html[data-theme="y2k"] .nav-btn:hover { background: #eab308; color: #1e003b; box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
+    html[data-theme="y2k"] .tooltip-box { background: #1e003b; color: #eab308; border: 2px solid #eab308; }
+
+    html[data-theme="90s"] body { background: #fcfbf7; color: #111111; }
+    html[data-theme="90s"] .glass { background: #ffffff; border: 3px double #222222; border-radius: 0px !important; }
+    html[data-theme="90s"] .brand-text { color: #111111; font-family: serif; font-weight: 900; text-decoration: underline; }
+    html[data-theme="90s"] .accent { background: #111111; color: #ffffff; border-radius: 0px !important; }
+    html[data-theme="90s"] .accent:hover { background: #333333; }
+    html[data-theme="90s"] .soft-card { background: #f4f3ef; border: 1px solid #222222; border-radius: 0px !important; }
+    html[data-theme="90s"] .nav-btn { background: #fcfbf7; border: 1px solid #222222; color: #111111; border-radius: 0px !important; }
+    html[data-theme="90s"] .nav-btn:hover { background: #111111; color: #ffffff; }
+    html[data-theme="90s"] .tooltip-box { background: #ffffff; color: #111111; border: 1px solid #222222; border-radius: 0px !important; }
+
+    /* ========== SLOGAN TICKER (moves LEFT) ========== */
+    .slogan-ticker-wrapper {
+      overflow: hidden;
+      width: 100%;
+      border-top: 1px solid rgba(255, 107, 53, 0.25);
+      border-bottom: 1px solid rgba(255, 107, 53, 0.25);
+      background: rgba(255, 107, 53, 0.06);
+      padding: 8px 0;
+    }
+    html[data-theme="90s"] .slogan-ticker-wrapper { background: #f0ede5; border-color: #222; }
+    html[data-theme="y2k"] .slogan-ticker-wrapper { background: rgba(234,179,8,0.06); border-color: rgba(234,179,8,0.3); }
+
+    .slogan-ticker-track {
+      display: flex;
+      gap: 60px;
+      width: max-content;
+      animation: tickerLeft 28s linear infinite;
+    }
+    .slogan-ticker-track:hover { animation-play-state: paused; }
+
+    @keyframes tickerLeft {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    .slogan-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255, 181, 157, 0.75);
+      font-family: 'Courier New', monospace;
+    }
+    html[data-theme="90s"] .slogan-item { color: #333; font-family: serif; }
+    html[data-theme="y2k"] .slogan-item { color: rgba(234,179,8,0.8); }
+
+    .slogan-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ff6b35;
+      flex-shrink: 0;
+    }
+    html[data-theme="y2k"] .slogan-dot { background: #eab308; }
+    html[data-theme="90s"] .slogan-dot { background: #111; }
+
+    /* ========== PHOTO MARQUEE (moves RIGHT) ========== */
+    .photo-marquee-wrapper {
+      overflow: hidden;
+      width: 100%;
+      padding: 10px 0;
+      background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid rgba(255,107,53,0.15);
+    }
+    html[data-theme="90s"] .photo-marquee-wrapper { background: #e8e5dc; border-color: #222; }
+    html[data-theme="y2k"] .photo-marquee-wrapper { background: rgba(0,0,0,0.3); border-color: rgba(234,179,8,0.2); }
+
+    .photo-marquee-track {
+      display: flex;
+      gap: 12px;
+      width: max-content;
+      animation: marqueeRight 35s linear infinite;
+    }
+    .photo-marquee-track:hover { animation-play-state: paused; }
+
+    @keyframes marqueeRight {
+      from { transform: translateX(-50%); }
+      to { transform: translateX(0); }
+    }
+
+    .photo-marquee-item {
+      position: relative;
+      flex-shrink: 0;
+      width: 160px;
+      height: 90px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255,107,53,0.2);
+    }
+    html[data-theme="90s"] .photo-marquee-item { border-radius: 0; border: 2px solid #222; }
+    html[data-theme="y2k"] .photo-marquee-item { border-color: rgba(234,179,8,0.3); border-radius: 10px; }
+
+    .photo-marquee-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.75) saturate(0.85);
+      transition: filter 0.3s ease;
+    }
+    .photo-marquee-item:hover img { filter: brightness(1) saturate(1); }
+
+    .photo-marquee-item .photo-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 6px 3px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-6">
+
+  <!-- NAVIGATION -->
+  <header class="w-full max-w-7xl mx-auto mb-4 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-up">
+    <div class="flex items-center gap-3">
+      <div id="user-avatar" class="w-10 h-10 rounded-full accent grid place-items-center font-black">SV</div>
+      <div>
+        <h1 class="text-xl font-black brand-text" id="welcome-title">StreetVoice Workspace</h1>
+        <p class="text-xs opacity-75" id="user-meta">Loading node credentials...</p>
+      </div>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+        <div class="relative group">
+          <a href="profile.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">👤</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-profile">User Profile Node</div>
+        </div>
+        <div class="relative group">
+          <a href="leaderboard.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">🏆</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-leaderboard">Global Rankings</div>
+        </div>
+        <div class="relative group">
+          <a href="feed.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">📰</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-feed">Full Telemetry Feed</div>
+        </div>
+        <div class="relative group">
+          <a href="about.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">ℹ️</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-about">Project Matrix Info</div>
+        </div>
+        <div class="relative group">
+          <a href="settings.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">⚙️</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-setting">Node Configurations</div>
+        </div>
+      </div>
+
+      <div class="glass px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-sm">
+        <span class="opacity-75">Language / भाषा:</span>
+        <button onclick="updatePageLanguage('en')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">English</button>
+        <button onclick="updatePageLanguage('hi')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">हिन्दी</button>
+      </div>
+
+      <div class="glass px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-sm">
+        <span class="opacity-75" id="lbl-switch-era">Switch Era:</span>
+        <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
+        <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
+        <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== SLOGAN TICKER (LEFT) ========== -->
+  <div class="slogan-ticker-wrapper mb-0">
+    <div class="slogan-ticker-track">
+      <div class="slogan-item"><div class="slogan-dot"></div>Your city. Your voice. Your responsibility.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>One photo. Infinite impact. Report now.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Every pothole reported is a life protected.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>AI-powered. Community-driven. India-first.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Earn StreetCredits. Build a better India.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Silence doesn't fix potholes. StreetVoice does.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Apni awaaz uthaao. Apna sheher bachao.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Report. Verify. Earn. Repeat.</div>
+      <!-- Duplicate for seamless loop -->
+      <div class="slogan-item"><div class="slogan-dot"></div>Your city. Your voice. Your responsibility.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>One photo. Infinite impact. Report now.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Every pothole reported is a life protected.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>AI-powered. Community-driven. India-first.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Earn StreetCredits. Build a better India.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Silence doesn't fix potholes. StreetVoice does.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Apni awaaz uthaao. Apna sheher bachao.</div>
+      <div class="slogan-item"><div class="slogan-dot"></div>Report. Verify. Earn. Repeat.</div>
+    </div>
+  </div>
+
+  <!-- ========== PHOTO MARQUEE (RIGHT) ========== -->
+  <div class="photo-marquee-wrapper mb-6">
+    <div class="photo-marquee-track">
+      <!-- First set -->
+      <div class="photo-marquee-item">
+        <img src="open manholes.jpg" alt="Open Manholes" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Manholes'"/>
+        <div class="photo-label">Open Manholes</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="water leakage.jpg" alt="Water Leakage" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Water+Leakage'"/>
+        <div class="photo-label">Water Leakage</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="potholes.jpg" alt="Potholes" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Potholes'"/>
+        <div class="photo-label">Potholes</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="broken streetlights.jpg" alt="Broken Streetlights" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Streetlights'"/>
+        <div class="photo-label">Broken Streetlights</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="overflowing garbage.jpg" alt="Overflowing Garbage" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Garbage'"/>
+        <div class="photo-label">Garbage Overflow</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="damaged footpaths.jpg" alt="Damaged Footpaths" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Footpaths'"/>
+        <div class="photo-label">Damaged Footpaths</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="public wall damage.jpg" alt="Wall Damage" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Wall+Damage'"/>
+        <div class="photo-label">Wall Damage</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="stray construction debris.jpg" alt="Construction Debris" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Debris'"/>
+        <div class="photo-label">Construction Debris</div>
+      </div>
+      <!-- Duplicate for seamless loop -->
+      <div class="photo-marquee-item">
+        <img src="open manholes.jpg" alt="Open Manholes" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Manholes'"/>
+        <div class="photo-label">Open Manholes</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="water leakage.jpg" alt="Water Leakage" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Water+Leakage'"/>
+        <div class="photo-label">Water Leakage</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="potholes.jpg" alt="Potholes" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Potholes'"/>
+        <div class="photo-label">Potholes</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="broken streetlights.jpg" alt="Broken Streetlights" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Streetlights'"/>
+        <div class="photo-label">Broken Streetlights</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="overflowing garbage.jpg" alt="Overflowing Garbage" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Garbage'"/>
+        <div class="photo-label">Garbage Overflow</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="damaged footpaths.jpg" alt="Damaged Footpaths" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Footpaths'"/>
+        <div class="photo-label">Damaged Footpaths</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="public wall damage.jpg" alt="Wall Damage" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Wall+Damage'"/>
+        <div class="photo-label">Wall Damage</div>
+      </div>
+      <div class="photo-marquee-item">
+        <img src="stray construction debris.jpg" alt="Construction Debris" onerror="this.src='https://via.placeholder.com/160x90/1a1a1a/ff6b35?text=Debris'"/>
+        <div class="photo-label">Construction Debris</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE CONTENT LAYER -->
+  <main class="w-full max-w-7xl mx-auto grid lg:grid-cols-[1.1fr_1.9fr] gap-6 items-start">
+    
+    <div class="space-y-6 animate-fade-up" style="animation-delay: 0.1s;">
+      <div class="glass rounded-2xl p-5">
+        <h2 class="text-xs font-black uppercase tracking-widest border-b border-current pb-2 mb-4 opacity-80" id="lbl-telemetry">Citizen Node Telemetry</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="soft-card p-3 rounded-xl">
+            <span class="text-[10px] opacity-60 block uppercase font-bold" id="lbl-credits">StreetCredits</span>
+            <strong class="text-xl brand-text" id="stat-credits">100</strong>
+          </div>
+          <div class="soft-card p-3 rounded-xl">
+            <span class="text-[10px] opacity-60 block uppercase font-bold" id="lbl-level">Civic Level</span>
+            <strong class="text-xl brand-text" id="stat-level">1</strong>
+          </div>
+          <div class="soft-card p-3 rounded-xl">
+            <span class="text-[10px] opacity-60 block uppercase font-bold" id="lbl-reported">Logged Incidents</span>
+            <strong class="text-xl brand-text" id="stat-reported">0</strong>
+          </div>
+          <div class="soft-card p-3 rounded-xl">
+            <span class="text-[10px] opacity-60 block uppercase font-bold" id="lbl-verified">Validations Given</span>
+            <strong class="text-xl brand-text" id="stat-verified">0</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Credits Redemption CTA -->
+      <div class="glass rounded-2xl p-4" style="border-color: rgba(255,196,0,0.3);">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="text-xs font-black uppercase tracking-wider opacity-60 mb-1">StreetCredits Balance</div>
+            <div class="text-2xl font-black brand-text">🪙 <span id="credits-display">100</span></div>
+          </div>
+          <a href="profile.html" class="accent px-3 py-2 rounded-xl text-xs font-black">Redeem →</a>
+        </div>
+        <div class="text-[10px] opacity-60 font-mono">Use credits at Swiggy · Amazon · Metro · and more</div>
+      </div>
+
+      <!-- ===== GEMINI VISION — AI QUICK TRIAGE ===== -->
+      <div class="glass rounded-2xl p-5 space-y-3 border-l-4 border-sky-500/60">
+        <div>
+          <h2 class="text-sm font-black uppercase tracking-wider flex items-center gap-2">⚡ AI Quick Triage <span class="text-[9px] font-mono opacity-50 bg-black/20 px-1.5 py-0.5 rounded">GEMINI VISION</span></h2>
+          <p class="text-xs opacity-70 mt-1">Upload a photo of the issue — Gemini analyzes it live before you file the full report.</p>
+        </div>
+
+        <input type="file" id="triage-image-input" accept="image/*" onchange="handleTriageImageSelect(event)"
+          class="w-full text-xs file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:font-bold file:bg-black/30 file:text-current cursor-pointer" />
+
+        <img id="triage-preview" class="hidden w-full max-h-44 object-cover rounded-xl border border-current/10" />
+
+        <button id="triage-analyze-btn" onclick="analyzeImageWithGemini()" disabled
+          class="w-full accent py-3 rounded-xl text-xs font-black uppercase tracking-wider transition disabled:opacity-30 disabled:cursor-not-allowed">
+          <span id="triage-btn-text">Select an image first</span>
+        </button>
+
+        <div id="triage-result" class="hidden soft-card p-4 rounded-xl text-xs space-y-2 font-mono leading-relaxed"></div>
+        <div id="triage-error" class="hidden text-[11px] text-red-400 font-mono"></div>
+      </div>
+
+      <div class="glass rounded-2xl p-6 space-y-4 border-l-4 border-amber-500/50">
+        <div>
+          <h2 class="text-lg font-black tracking-tight" id="lbl-intakeTitle">Incident Hub Vault</h2>
+          <p class="text-xs opacity-75 mt-0.5" id="lbl-intakeSub">Direct entry reporting has been consolidated into our dedicated file intake architecture. Launch the official pipeline module below to structure your incident.</p>
+        </div>
+        <a href="report.html" class="block w-full accent py-4 rounded-xl font-black transition uppercase tracking-wider text-xs shadow-md text-center flex items-center justify-center gap-2 group">
+          <span id="btn-report-redirect-text">Launch Incident Pipeline</span>
+          <span class="transform group-hover:translate-x-1 transition-transform inline-block font-mono text-sm">→</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-6 min-h-[550px] flex flex-col">
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-current pb-4 mb-5">
+        <div>
+          <h2 class="text-xl font-black tracking-tight" id="lbl-feedTitle">Active Regional Telemetry Feed</h2>
+          <p class="text-xs opacity-75" id="lbl-feedSub">AI models auto-translate and format community entries into structured English records.</p>
+        </div>
+        <span class="text-xs font-mono bg-neutral-800 text-white px-3 py-1 rounded-full self-start" id="feed-city-badge">MUMBAI-WARD-ALPHA</span>
+      </div>
+      <div id="incidents-container" class="space-y-4 flex-1"></div>
+    </div>
+  </main>
+
+  <script>
+    const locales = {
+      en: {
+        title: "Workspace Node",
+        telemetry: "Citizen Node Telemetry",
+        intakeTitle: "Incident Hub Vault",
+        intakeSub: "Direct entry reporting has been consolidated into our dedicated file intake architecture. Launch the official pipeline module below to structure your incident.",
+        btnReportRedirect: "Launch Incident Pipeline",
+        feedTitle: "Active Regional Telemetry Feed",
+        feedSub: "AI models auto-translate and format community entries into structured English records.",
+        btnVerify: "Verify",
+        credits: "StreetCredits",
+        level: "Civic Level",
+        reported: "Logged Incidents",
+        verified: "Validations Given",
+        switchEra: "Switch Era:",
+        ttProfile: "User Profile Node",
+        ttLeaderboard: "Global Rankings",
+        ttFeed: "Full Telemetry Feed",
+        ttAbout: "Project Matrix Info",
+        ttSetting: "Node Configurations"
+      },
+      hi: {
+        title: "वर्कस्पेस नोड",
+        telemetry: "नागरिक नोड टेलीमेट्री",
+        intakeTitle: "इंसिडेंट हब वॉल्ट",
+        intakeSub: "सीधी प्रविष्टि रिपोर्टिंग को हमारे समर्पित इनटेक आर्किटेक्चर में समेकित किया गया है।",
+        btnReportRedirect: "इंसिडेंट पाइपलाइन लॉन्च करें",
+        feedTitle: "सक्रिय क्षेत्रीय लाइव फीड",
+        feedSub: "एआई मॉडल स्थानीय शिकायतों का अनुवाद कर के उन्हें आधिकारिक अंग्रेजी रिकॉर्ड में बदलता है।",
+        btnVerify: "सत्यापित करें",
+        credits: "स्ट्रीटक्रेडिट अंक",
+        level: "नागरिक स्तर",
+        reported: "दर्ज शिकायतें",
+        verified: "सत्यापित रिपोर्ट",
+        ttProfile: "यूज़र प्रोफ़ाइल",
+        ttLeaderboard: "वैश्विक रैंकिंग",
+        ttFeed: "लाइव फीड लॉग",
+        ttAbout: "परियोजना की जानकारी",
+        ttSetting: "नोड कॉन्फ़िगरेशन"
+      }
+    };
+
+    let currentUser = null;
+    let currentLanguage = 'en';
+
+    const globalMockIncidents = [
+      { id: "SV-REP-104", category: "Roadways & Potholes", location: "Linking Road, near National College", desc: "Severe structural failure on primary asphalt layer. Deep potholes causing major multi-lane transit delays.", sourceLang: "Hinglish Audio Input ('Pothole bohot gehra hai, vehicles are damaging')", votes: 18, user: "SV-MUM-ROHAN-2289" },
+      { id: "SV-REP-105", category: "Electrical & Streetlights", location: "Goregaon East Hub Ext", desc: "High voltage sub-station box door is unlatched and wide open, exposing active electrical circuitry to heavy rainfall.", sourceLang: "Hindi Audio Input ('Bijli ka box khula pada hai, short circuit ho sakta hai')", votes: 31, user: "SV-MUM-PRIYA-4512" }
+    ];
+
+    function setEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+    }
+
+    function updatePageLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+      const dict = locales[lang];
+      document.getElementById("welcome-title").textContent = `${dict.title}: ${currentUser.name}`;
+      document.getElementById("lbl-telemetry").textContent = dict.telemetry;
+      document.getElementById("lbl-intakeTitle").textContent = dict.intakeTitle;
+      document.getElementById("lbl-intakeSub").textContent = dict.intakeSub;
+      document.getElementById("btn-report-redirect-text").textContent = dict.btnReportRedirect;
+      document.getElementById("lbl-credits").textContent = dict.credits;
+      document.getElementById("lbl-level").textContent = dict.level;
+      document.getElementById("lbl-reported").textContent = dict.reported;
+      document.getElementById("lbl-verified").textContent = dict.verified;
+      document.getElementById("lbl-feedTitle").textContent = dict.feedTitle;
+      document.getElementById("lbl-feedSub").textContent = dict.feedSub;
+      document.querySelector('[data-label="tooltip-profile"]').textContent = dict.ttProfile;
+      document.querySelector('[data-label="tooltip-leaderboard"]').textContent = dict.ttLeaderboard;
+      document.querySelector('[data-label="tooltip-feed"]').textContent = dict.ttFeed;
+      document.querySelector('[data-label="tooltip-about"]').textContent = dict.ttAbout;
+      document.querySelector('[data-label="tooltip-setting"]').textContent = dict.ttSetting;
+      renderFeed(latestFirebaseReports);
+    }
+
+    function loadSession() {
+      const activeEra = localStorage.getItem('streetvoice_era_theme') || 'modern';
+      setEra(activeEra);
+
+      const currentUserId = localStorage.getItem("streetvoice_current_user");
+      if (!currentUserId || !localStorage.getItem(`streetvoice_user_${currentUserId}`)) {
+        const defaultDevId = "SV-MUM-DEV-4000";
+        const devUser = { id: defaultDevId, name: "Civic Innovator", initials: "CI", city: "Mumbai", email: "hackathon@node.internal", level: 3, streetCredits: 350, stats: { reported: 2, verified: 14 }, reports: [] };
+        localStorage.setItem(`streetvoice_user_${defaultDevId}`, JSON.stringify(devUser));
+        localStorage.setItem("streetvoice_current_user", defaultDevId);
+      }
+
+      currentUser = JSON.parse(localStorage.getItem(`streetvoice_user_${localStorage.getItem("streetvoice_current_user")}`));
+      document.getElementById("user-avatar").textContent = currentUser.initials || "SV";
+      document.getElementById("user-meta").textContent = `ID: ${currentUser.id} • Ward Unit: ${currentUser.city.toUpperCase()}`;
+      document.getElementById("feed-city-badge").textContent = `WARD: ${currentUser.city.toUpperCase()}`;
+      updateStatsPanel();
+      const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
+      updatePageLanguage(savedLang);
+    }
+
+    function updateStatsPanel() {
+      document.getElementById("stat-credits").textContent = currentUser.streetCredits;
+      document.getElementById("stat-level").textContent = currentUser.level;
+      document.getElementById("stat-reported").textContent = currentUser.stats.reported;
+      document.getElementById("stat-verified").textContent = currentUser.stats.verified;
+      document.getElementById("credits-display").textContent = currentUser.streetCredits;
+    }
+
+    function renderFeed(firebaseReports) {
+      const container = document.getElementById("incidents-container");
+      container.innerHTML = "";
+      const dict = locales[currentLanguage];
+
+      // Use real Firebase reports if we have any; otherwise show mock demo incidents so the page isn't empty
+      const fullFeed = (firebaseReports && firebaseReports.length > 0)
+        ? firebaseReports
+        : globalMockIncidents;
+
+      fullFeed.forEach(incident => {
+        const card = document.createElement("div");
+        card.className = "soft-card p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all";
+        card.innerHTML = `
+          <div class="space-y-1.5 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-black/20 text-current">${incident.category}</span>
+              <span class="text-xs font-mono opacity-80">${incident.location}</span>
+            </div>
+            <p class="text-sm leading-relaxed">${incident.desc}</p>
+            <div class="flex items-center gap-2 text-[10px] opacity-60 font-mono">
+              <span>Node: ${incident.user}</span><span>•</span>
+              <span class="text-emerald-500 font-bold">${incident.sourceLang}</span>
+            </div>
+          </div>
+          <div class="flex sm:flex-col items-center gap-2 self-stretch sm:self-auto justify-between border-t sm:border-t-0 border-current/10 pt-2 sm:pt-0">
+            <div class="text-center">
+              <span class="text-[9px] opacity-60 block uppercase font-bold tracking-tight">Validations</span>
+              <strong class="text-base font-mono">${incident.votes}</strong>
+            </div>
+            <button onclick="upvoteIncident('${incident.id}')" class="accent px-3 py-1.5 rounded-xl text-xs font-bold transition">${dict.btnVerify || 'Verify'}</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ===== FIREBASE: live realtime listener so feed updates instantly across all devices =====
+    let latestFirebaseReports = [];
+    function listenToFirebaseFeed() {
+      if (!window.db) {
+        console.warn("Firebase not initialized — check firebase-config.js. Showing mock data only.");
+        renderFeed([]);
+        return;
+      }
+      db.ref('reports').limitToLast(20).on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        latestFirebaseReports = Object.keys(data)
+          .map(key => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        renderFeed(latestFirebaseReports);
+      }, (err) => {
+        console.error("Firebase feed read failed:", err);
+        renderFeed([]);
+      });
+    }
+
+   function upvoteIncident(id) {
+      // Initialize the votedIncidents tracker if it doesn't exist yet
+      if (!currentUser.votedIncidents) {
+        currentUser.votedIncidents = [];
+      }
+
+      // CHECK: If the user has already verified this specific incident ID, block them immediately
+      if (currentUser.votedIncidents.includes(id)) {
+        alert("You have already verified this incident node.");
+        return;
+      }
+
+      // Try Firebase report first (real cross-device data)
+      const isFirebaseReport = latestFirebaseReports.some(r => r.id === id);
+
+      if (isFirebaseReport && window.db) {
+        db.ref('reports/' + id + '/votes').transaction(v => (v || 0) + 1)
+          .catch(err => console.error("Firebase vote update failed:", err));
+      } else {
+        let mockMatch = globalMockIncidents.find(m => m.id === id);
+        if (mockMatch) mockMatch.votes += 1;
+        renderFeed(latestFirebaseReports);
+      }
+
+      // Track that this incident is now verified by this user
+      currentUser.votedIncidents.push(id);
+      
+      // Award credits and increment validation counts
+      currentUser.stats.verified += 1;
+      currentUser.streetCredits += 10;
+      
+      // Save state to local browser cache
+      localStorage.setItem(`streetvoice_user_${currentUser.id}`, JSON.stringify(currentUser));
+      updateStatsPanel();
+
+      // Sync updated credentials and tracking array directly to Firebase Realtime Database
+      if (window.db) {
+        db.ref('users/' + currentUser.id).update({
+          name: currentUser.name,
+          city: currentUser.city,
+          streetCredits: currentUser.streetCredits,
+          stats: currentUser.stats,
+          votedIncidents: currentUser.votedIncidents
+        }).catch(err => console.error("Firebase user update failed:", err));
+      }
+    }
+
+    /* ==========================================================================
+       GEMINI VISION — REAL AI QUICK TRIAGE
+       ========================================================================== */
+    let selectedTriageImageBase64 = null;
+    let selectedTriageImageMime = null;
+    const TRIAGE_API_URL = 'http://localhost:3000/api/analyze-image';
+
+    function handleTriageImageSelect(event) {
+      const file = event.target.files[0];
+      const btn = document.getElementById("triage-analyze-btn");
+      const btnText = document.getElementById("triage-btn-text");
+      const preview = document.getElementById("triage-preview");
+      const resultBox = document.getElementById("triage-result");
+      const errorBox = document.getElementById("triage-error");
+
+      resultBox.classList.add("hidden");
+      errorBox.classList.add("hidden");
+
+      if (!file) {
+        btn.disabled = true;
+        btnText.textContent = "Select an image first";
+        return;
+      }
+
+      selectedTriageImageMime = file.type || "image/jpeg";
+      const reader = new FileReader();
+      reader.onload = () => {
+        // reader.result is "data:image/jpeg;base64,XXXX" — strip the prefix, Gemini wants raw base64
+        selectedTriageImageBase64 = reader.result.split(',')[1];
+        preview.src = reader.result;
+        preview.classList.remove("hidden");
+        btn.disabled = false;
+        btnText.textContent = "Analyze with Gemini Vision";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeImageWithGemini() {
+      const btn = document.getElementById("triage-analyze-btn");
+      const btnText = document.getElementById("triage-btn-text");
+      const resultBox = document.getElementById("triage-result");
+      const errorBox = document.getElementById("triage-error");
+
+      if (!selectedTriageImageBase64) return;
+
+      btn.disabled = true;
+      btnText.textContent = "⚡ Gemini is analyzing the image...";
+      resultBox.classList.add("hidden");
+      errorBox.classList.add("hidden");
+
+      try {
+        const response = await fetch(TRIAGE_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: selectedTriageImageBase64,
+            mimeType: selectedTriageImageMime
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded ${response.status}`);
+        }
+
+        const data = await response.json();
+        const a = data.analysis;
+
+        const severityColor = {
+          LOW: "text-emerald-400", MEDIUM: "text-amber-400",
+          HIGH: "text-orange-400", CRITICAL: "text-red-400"
+        }[a.severity] || "text-current";
+
+        resultBox.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="opacity-60 uppercase text-[10px]">Category</span>
+            <span class="font-bold">${a.category}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="opacity-60 uppercase text-[10px]">Severity</span>
+            <span class="font-bold ${severityColor}">${a.severity} (${a.severityScore}/100)</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="opacity-60 uppercase text-[10px]">Route To</span>
+            <span class="font-bold">${a.suggestedDepartment}</span>
+          </div>
+          ${a.urgent ? `<div class="text-red-400 font-bold">🚨 Flagged as urgent</div>` : ``}
+          <div class="pt-2 border-t border-current/10 opacity-90">${a.summary}</div>
+        `;
+        resultBox.classList.remove("hidden");
+        btnText.textContent = "✅ Analyzed — upload another to re-run";
+        // === CRITICAL: SAVE TO FIREBASE REALTIME DATABASE WITH COORDINATES ===
+        if (window.db) {
+          // Default fallback coordinates near central Mumbai nexus matrix if user denies GPS permissions
+          let userLatitude = 19.0760 + (Math.random() - 0.5) * 0.05;
+          let userLongitude = 72.8777 + (Math.random() - 0.5) * 0.05;
+
+          // Native HTML5 Geolocation API invocation
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                userLatitude = position.coords.latitude;
+                userLongitude = position.coords.longitude;
+                await commitReportToFirebase(userLatitude, userLongitude);
+              },
+              async (err) => {
+                console.warn("Geolocation access denied or timed out. Falling back to synthetic regional offset.", err);
+                await commitReportToFirebase(userLatitude, userLongitude);
+              },
+              { enableHighAccuracy: true, timeout: 5000 }
+            );
+          } else {
+            await commitReportToFirebase(userLatitude, userLongitude);
+          }
+
+          async function commitReportToFirebase(lat, lng) {
+            try {
+              const newReportRef = db.ref('reports').push();
+              await newReportRef.set({
+                category: a.category,
+                location: currentUser ? currentUser.city.toUpperCase() : "MUMBAI",
+                lat: lat,
+                lng: lng,
+                desc: a.summary,
+                sourceLang: "Gemini Vision AI Triage",
+                votes: 0,
+                user: currentUser ? currentUser.id : "SV-ANON-NODE",
+                timestamp: Date.now(),
+                severity: a.severity,
+                severityScore: a.severityScore,
+                suggestedDepartment: a.suggestedDepartment,
+                urgent: a.urgent
+              });
+              console.log("Telemetry node pushed to Firebase successfully with spatial vectors:", lat, lng);
+            } catch(ex) {
+              console.error("Firebase write sequence failed:", ex);
+            }
+          }
+        } else {
+          console.warn("Database fallback: window.db not detected.");
+        }
+
+      } catch (err) {
+        console.error("Gemini Vision triage failed:", err);
+        errorBox.textContent = `⚠️ ${err.message || "Could not reach the Gemini Vision server. Is server.js running on port 3000?"}`;
+        errorBox.classList.remove("hidden");
+        btnText.textContent = "Retry Analysis";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    window.onload = function() {
+      loadSession();
+      listenToFirebaseFeed();
+    };
+  </script>
+</body>
+<script src="cursor.js"></script>
+</html>

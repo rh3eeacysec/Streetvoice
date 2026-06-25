@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — Civic Poster Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* ==========================================================================
+       THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+      --btn-text: #ffffff;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #eab308; 
+      --radius: 24px; 
+      --font: 'Courier New', monospace;
+      --brand-color: #eab308;
+      --btn-text: #1e003b;
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --text: #f8fafc; 
+      --accent: #38bdf8; 
+      --border: #334155; 
+      --radius: 16px; 
+      --font: system-ui, -apple-system, sans-serif;
+      --brand-color: #ffb59d;
+      --btn-text: #0f172a;
+    }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font); 
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s; 
+      overflow-x: hidden; 
+    }
+    .glass { 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      backdrop-filter: blur(16px);
+    }
+    .brand-text { color: var(--brand-color); }
+    .accent { background: var(--accent); color: var(--btn-text); font-weight: 800; }
+    .input { 
+      width: 100%; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05); 
+      color: var(--text); border-radius: calc(var(--radius) / 1.3); padding: 12px 16px; outline: none; transition: all 0.2s;
+    }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  </style>
+</head>
+<body class="p-4 md:p-6 min-h-screen">
+
+  <header class="w-full max-w-7xl mx-auto mb-6 flex flex-wrap justify-between items-center gap-3 animate-fade-up">
+    <a href="index.html" class="brand-text text-xl font-black flex items-center gap-2">
+      <span>← StreetVoice</span>
+    </a>
+    
+    <div class="flex flex-wrap gap-3">
+      <div class="glass px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75">Language / भाषा:</span>
+        <button onclick="updatePageLanguage('en')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">English</button>
+        <button onclick="updatePageLanguage('hi')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">हिन्दी</button>
+      </div>
+
+      <div class="glass px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75" id="lbl-switch-era">Design Generation:</span>
+        <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
+        <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
+        <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+    <div class="glass p-6 space-y-4 text-xs shadow-xl animate-fade-up" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-black tracking-tight" id="txt-title">Civic Poster Studio</h2>
+      
+      <input type="text" id="issue-selector" class="input font-semibold" placeholder="e.g., Unresolved waste aggregation on public walkway">
+      
+      <select id="tone-selector" class="input font-semibold cursor-pointer">
+        <option value="constructive">Constructive Notice / Request for Attention</option>
+        <option value="public-safety">Public Safety Announcement / Awareness</option>
+        <option value="community-call">Civic Duty & Community Cooperation Call</option>
+      </select>
+      
+      <button onclick="generateLivePoster()" id="btn-generate" class="w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-md accent" style="border-radius: var(--radius);">
+        Generate Notice via Studio Agent
+      </button>
+
+      <button onclick="downloadMeme()" id="btn-download" class="hidden w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all bg-emerald-500 hover:bg-emerald-600 text-slate-900 shadow-md" style="border-radius: var(--radius);">
+        📥 Export Vector Graphics PNG
+      </button>
+    </div>
+
+    <div class="flex justify-center items-center p-2 animate-fade-up" style="animation-delay: 0.2s;">
+      <div id="poster-canvas" class="w-full max-w-sm aspect-[4/5] p-8 flex flex-col justify-between border-2 relative overflow-hidden transition-all shadow-2xl" style="border-color: var(--border); background-color: var(--bg); border-radius: var(--radius);">
+        <div class="flex justify-between items-start font-mono text-[9px] uppercase tracking-widest opacity-60">
+          <div>[STREETVOICE CIVIC INTEL]</div>
+          <div>OFFICIAL NOTICE LAYOUT</div>
+        </div>
+
+        <div class="my-auto text-center">
+          <h2 id="canvas-slogan" class="text-xl md:text-2xl font-black uppercase tracking-tight break-words leading-tight">
+            Provide issue parameters to compile objective bulletin announcement...
+          </h2>
+          <p id="canvas-context-sub" class="text-xs font-mono opacity-50 mt-4 tracking-wide truncate max-w-xs mx-auto uppercase"></p>
+        </div>
+
+        <div class="flex justify-between items-end font-mono text-[8px] opacity-40 border-t pt-2" style="border-color: var(--border);">
+          <div>GEN-ENGINE: GEMINI-FLASH</div>
+          <div>STATUS: AUTHENTICATED</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const locales = {
+      en: {
+        canvasProcessing: "⚡ ENGINE CALL: Processing objective bulletin text...",
+        canvasErr: "[ERROR]: Core matrix request timeout configuration exception."
+      },
+      hi: {
+        canvasProcessing: "⚡ एआई इंजन: आधिकारिक सूचना पाठ तैयार किया जा रहा है...",
+        canvasErr: "[त्रुटि]: सर्वर रिस्पांस कनेक्शन विफल रहा।"
+      }
+    };
+
+    let currentLanguage = 'en';
+
+    function setEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+    }
+
+    function updatePageLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+    }
+
+    async function generateLivePoster() {
+      const problemContext = document.getElementById("issue-selector").value.trim();
+      const tone = document.getElementById("tone-selector").value;
+      const btn = document.getElementById("btn-generate");
+      const dict = locales[currentLanguage] || locales.en;
+
+      if (!problemContext) {
+        alert("Please specify the infrastructure parameter item context first.");
+        return;
+      }
+
+      document.getElementById("canvas-slogan").textContent = dict.canvasProcessing;
+      btn.disabled = true;
+
+      const GEMINI_API_KEY = "YOUR_GOOGLE_AI_STUDIO_API_KEY"; 
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+      const promptText = `You are an elite public administrative communication analyst assistant.
+      Draft a formal, respectful, highly objective, and constructive headline text phrase suitable for a public notice, civic awareness banner, or neighborhood bulletin regarding this matter: "${problemContext}".
+      The linguistic layout style must carefully conform to this framing archetype: "${tone}".
+      The phrasing must be entirely respectful to municipal authorities and focus on constructive civic improvement or public cooperation.
+      Do not include any aggressive words, exclamation overloads, sarcasm, or emojis. Keep it under 10 clear words total. Return strictly the unquoted string text.`;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
+        
+        const data = await response.json();
+        const generatedText = data.candidates[0].content.parts[0].text.trim();
+        
+        document.getElementById("canvas-slogan").textContent = generatedText;
+        document.getElementById("canvas-context-sub").textContent = `NOTICE REF: ${problemContext}`;
+        document.getElementById("btn-download").classList.remove("hidden");
+      } catch (err) {
+        console.error(err);
+        document.getElementById("canvas-slogan").textContent = dict.canvasErr;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate Notice via Studio Agent";
+      }
+    }
+
+    function downloadMeme() {
+      html2canvas(document.getElementById("poster-canvas"), { 
+        useCORS: true, 
+        backgroundColor: null,
+        scale: 2
+      }).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `streetvoice-notice-${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    }
+
+    window.onload = function() {
+      const activeEra = localStorage.getItem('streetvoice_era_theme') || 'modern';
+      setEra(activeEra);
+      const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
+      updatePageLanguage(savedLang);
+    };
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>

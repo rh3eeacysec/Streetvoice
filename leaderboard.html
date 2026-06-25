@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — Elite Standings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    [data-theme="90s"] { --bg: #fcfbf7; --surface: #ffffff; --text: #111111; --accent: #111111; --border: #222222; --radius: 0px; --card-bg: #ffffff; --text-muted: #555555; --nav-active: #111111; --nav-active-text: #ffffff; }
+    [data-theme="y2k"] { --bg: #0b0117; --surface: rgba(24, 3, 48, 0.85); --text: #fef08a; --accent: #eab308; --border: #ca8a04; --radius: 8px; --card-bg: rgba(30, 4, 60, 0.6); --text-muted: #a16207; --nav-active: #eab308; --nav-active-text: #0b0117; }
+    [data-theme="modern"] { --bg: #0f172a; --surface: #1e293b; --text: #f8fafc; --accent: #38bdf8; --border: #334155; --radius: 16px; --card-bg: #1e293b; --text-muted: #94a3b8; --nav-active: #38bdf8; --nav-active-text: #0f172a; }
+    
+    body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; transition: background 0.4s ease; }
+    .glass-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); }
+    .nav-btn { transition: all 0.2s ease; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg); }
+    .nav-btn.active { background: var(--nav-active); color: var(--nav-active-text); font-weight: 900; border-color: var(--nav-active); }
+    .podium-avatar-wrapper { width: 72px; height: 72px; overflow: hidden; position: relative; border-radius: 50%; }
+    .podium-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+  <!-- Cursor and Global scripts -->
+  <script src="cursor.js"></script>
+
+  <div class="max-w-5xl mx-auto space-y-6">
+    <nav class="w-full flex flex-wrap gap-2 p-2 glass-card items-center shadow-md">
+      <a href="leaderboard.html" class="nav-btn active px-3 py-2 text-xs font-bold">🏆 Leaderboard</a>
+      <a href="profile.html" class="nav-btn px-3 py-2 text-xs font-bold ml-auto">👤 Profile</a>
+    </nav>
+
+    <div class="glass-card p-4 flex items-center gap-4">
+      <span class="text-xs font-bold uppercase">Design Era:</span>
+      <button onclick="setGlobalEra('90s')" class="px-2 py-1 border text-[11px] font-bold rounded" style="border-color: var(--border);">90s</button>
+      <button onclick="setGlobalEra('y2k')" class="px-2 py-1 border text-[11px] font-bold rounded" style="border-color: var(--border);">Y2K</button>
+      <button onclick="setGlobalEra('modern')" class="px-2 py-1 border text-[11px] font-bold rounded" style="border-color: var(--border);">Modern</button>
+    </div>
+
+    <h1 class="text-4xl font-black uppercase">Elite Standings</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4" id="podium-container"></div>
+
+    <div class="glass-card shadow-xl p-4">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="text-xs font-bold uppercase opacity-50">
+            <th class="py-3 px-4">Rank</th>
+            <th class="py-3 px-4">Node Operator</th>
+            <th class="py-3 px-4">Jurisdiction</th>
+            <th class="py-3 px-4 text-right">Credits</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-table-rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function setGlobalEra(era) {
+      document.documentElement.setAttribute('data-theme', era);
+      localStorage.setItem('streetvoice_era_theme', era);
+    }
+
+    function fetchDatabaseSnapshot() {
+      const mockUsers = {
+        "SV-DAD-GHOSTRIDER": { city: "Dadar", streetCredits: 4250, avatar: "pfp4.png", isMock: true },
+        "NEON-SAMURAI-88": { city: "Delhi", streetCredits: 3820, avatar: "pfp7.png", isMock: true },
+        "SV-VECTOR-ALPHA": { city: "Mumbai", streetCredits: 2910, avatar: "pfp1.png", isMock: true },
+        "CYBER-PANDA-04": { city: "Bengaluru", streetCredits: 1850, avatar: "pfp3.png", isMock: true },
+        "X-MUSHROOM-MAGE": { city: "Pune", streetCredits: 920, avatar: "pfp6.png", isMock: true },
+        "VOID-RUNNER-9": { city: "Kolkata", streetCredits: 850, avatar: "pfp2.png", isMock: true },
+        "DATA-WITCH-X": { city: "Chennai", streetCredits: 700, avatar: "pfp5.png", isMock: true },
+        "GLITCH-SOUL-0": { city: "Surat", streetCredits: 620, avatar: "pfp8.png", isMock: true },
+        "PHANTOM-NODE": { city: "Jaipur", streetCredits: 500, avatar: "pfp1.png", isMock: true },
+        "SILVER-FOX-99": { city: "Indore", streetCredits: 480, avatar: "pfp3.png", isMock: true },
+        "ORBITAL-JNK": { city: "Patna", streetCredits: 410, avatar: "pfp4.png", isMock: true },
+        "SYNTH-WAVE-01": { city: "Nagpur", streetCredits: 390, avatar: "pfp6.png", isMock: true },
+        "CORE-BREAKER": { city: "Bhopal", streetCredits: 350, avatar: "pfp7.png", isMock: true },
+        "ZEN-MODERATOR": { city: "Agra", streetCredits: 300, avatar: "pfp2.png", isMock: true },
+        "NIGHT-OWL-SEC": { city: "Nashik", streetCredits: 250, avatar: "pfp8.png", isMock: true }
+      };
+      renderLeaderboardEngine(mockUsers);
+    }
+
+    function renderLeaderboardEngine(data) {
+      const podiumContainer = document.getElementById("podium-container");
+      const tableBody = document.getElementById("leaderboard-table-rows");
+      const sortedList = Object.keys(data).map(key => ({ id: key, ...data[key] }))
+                              .sort((a, b) => b.streetCredits - a.streetCredits);
+
+      sortedList.slice(0, 3).forEach((node) => {
+        const div = document.createElement("div");
+        div.className = "p-6 glass-card flex flex-col items-center text-center gap-3";
+        div.innerHTML = `
+          <div class="podium-avatar-wrapper"><img src="${node.avatar}"></div>
+          <div>
+            <h2 class="font-black uppercase">${node.id}</h2>
+            <p class="text-[10px] opacity-60">${node.city.toUpperCase()} ${node.isMock ? '— MOCK USER' : ''}</p>
+          </div>
+          <div class="text-2xl font-black text-sky-400">${node.streetCredits.toLocaleString()}</div>
+        `;
+        podiumContainer.appendChild(div);
+      });
+
+      sortedList.slice(3).forEach((user, idx) => {
+        const row = document.createElement("tr");
+        row.className = "border-b border-white/5 text-xs";
+        row.innerHTML = `
+          <td class="py-4 px-4 opacity-40">#0${idx + 4}</td>
+          <td class="py-4 px-4 font-bold flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full overflow-hidden"><img src="${user.avatar}"></div>
+            ${user.id} ${user.isMock ? '<span class="text-[8px] opacity-50 ml-2">(MOCK)</span>' : ''}
+          </td>
+          <td class="py-4 px-4 opacity-70">${user.city.toUpperCase()}</td>
+          <td class="py-4 px-4 text-right font-black">${user.streetCredits.toLocaleString()}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+
+      // Confetti celebration
+      confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } });
+      confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setGlobalEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
+      fetchDatabaseSnapshot();
+    });
+  </script>
+</body>
+</html>

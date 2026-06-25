@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — Node Configuration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <style>
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; --surface: #ffffff; --text: #111111; --accent: #111111; --border: #222222; --radius: 0px; 
+      --font-heading: serif; --font-body: serif; --card-bg: #ffffff; --text-muted: #555555; --nav-active: #111111; --nav-active-text: #ffffff;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; --surface: rgba(24, 3, 48, 0.85); --text: #fef08a; --accent: #eab308; --border: #ca8a04; --radius: 8px; 
+      --font-heading: 'Courier New', monospace; --font-body: 'Courier New', monospace; --card-bg: rgba(30, 4, 60, 0.6); --text-muted: #a16207; --nav-active: #eab308; --nav-active-text: #0b0117;
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; --surface: #1e293b; --text: #f8fafc; --accent: #38bdf8; --border: #334155; --radius: 16px; 
+      --font-heading: 'Syne', sans-serif; --font-body: 'Space Grotesk', sans-serif; --card-bg: #1e293b; --text-muted: #94a3b8; --nav-active: #38bdf8; --nav-active-text: #0f172a;
+    }
+    
+    body { background: var(--bg); color: var(--text); font-family: var(--font-body); transition: background 0.4s ease, color 0.4s ease; }
+    h1, h2, h3 { font-family: var(--font-heading); }
+    .glass-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); }
+    .text-muted { color: var(--text-muted); }
+    
+    .nav-btn { transition: all 0.2s ease; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg); }
+    .nav-btn.active { background: var(--nav-active); color: var(--nav-active-text); font-weight: 900; border-color: var(--nav-active); }
+
+    .avatar-frame {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      display: block;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      opacity: 0.5;
+    }
+    .avatar-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+  <div class="max-w-3xl mx-auto space-y-6">
+    <nav class="w-full flex flex-wrap gap-2 p-2 glass-card items-center overflow-x-auto shadow-md">
+      <a href="dashboard.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">🏠 Home</a>
+      <a href="report.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">📢 Report</a>
+      <a href="feed.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">📰 Feed</a>
+      <a href="riskmap.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">🗺️ RiskMap</a>
+      <a href="agents.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">🤖 AI Agents</a>
+      <a href="studio.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">🎨 Studio</a>
+      <a href="leaderboard.html" class="nav-btn px-3 py-2 text-xs font-bold whitespace-nowrap">🏆 Leaderboard</a>
+      <a href="profile.html" class="nav-btn active px-3 py-2 text-xs font-bold whitespace-nowrap ml-auto">👤 Profile</a>
+    </nav>
+
+    <div class="w-full flex flex-wrap justify-between items-center p-4 glass-card gap-4">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase">Design Era:</span>
+        <button onclick="setGlobalEra('90s')" class="px-2 py-1 border text-[11px] font-bold rounded" style="border-color: var(--border);">90s</button>
+        <button onclick="setGlobalEra('y2k')" class="px-2 py-1 border text-[11px] font-bold rounded" style="border-color: var(--border);">Y2K</button>
+        <button onclick="setGlobalEra('modern')" class="px-2 py-1 border text-[11px] font-bold rounded" style="border-color: var(--border);">Modern</button>
+      </div>
+    </div>
+
+    <div class="glass-card p-6 shadow-xl space-y-6">
+      <div class="flex items-center gap-4 pb-4 border-b" style="border-color: var(--border);">
+        <div class="w-20 h-20 overflow-hidden flex-shrink-0">
+          <img id="current-avatar-display" src="pfp1.png" alt="Node Avatar" class="w-full h-full object-cover">
+        </div>
+        <div>
+          <h2 id="node-id-title" class="text-xl font-bold uppercase">SV-DAD-GHOSTRIDER-3794</h2>
+          <p id="node-city-subtitle" class="text-xs font-mono text-muted">JURISDICTION: DADAR</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <label class="block text-xs font-black uppercase tracking-wider">Select Secure Identity Avatar (Privacy Forced)</label>
+        <div class="grid grid-cols-4 sm:grid-cols-8 gap-3" id="avatar-grid-container"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-1">
+          <label class="block text-xs font-bold font-mono text-muted">Operator Token ID</label>
+          <input type="text" id="input-node-id" readonly class="w-full p-2.5 text-xs font-mono rounded bg-black/20 border outline-none opacity-60" style="border-color: var(--border);">
+        </div>
+        <div class="space-y-1">
+          <label class="block text-xs font-bold font-mono text-muted">Operational City</label>
+          <input type="text" id="input-node-city" class="w-full p-2.5 text-xs font-mono rounded bg-transparent border outline-none" style="border-color: var(--border);">
+        </div>
+      </div>
+
+      <button onclick="commitProfileChanges()" id="btn-save" class="w-full py-3 text-xs font-black uppercase tracking-widest rounded bg-cyan-500 text-slate-950 shadow-md">
+        Save Identity Configuration
+      </button>
+    </div>
+  </div>
+
+  <script src="cursor.js"></script>
+  <script>
+    let localSelectedAvatar = "pfp1.png";
+    let activeSessionUser = "SV-DAD-GHOSTRIDER-3794";
+
+    function setGlobalEra(era) {
+      document.documentElement.setAttribute('data-theme', era);
+      localStorage.setItem('streetvoice_era_theme', era);
+    }
+
+    function buildAvatarSelectionGrid() {
+      const container = document.getElementById("avatar-grid-container");
+      if (!container) return;
+      container.innerHTML = "";
+
+      for (let i = 1; i <= 8; i++) {
+        const fileName = `pfp${i}.png`;
+        const itemWrapper = document.createElement("div");
+        itemWrapper.className = "avatar-frame";
+        itemWrapper.id = `avatar-frame-${i}`;
+        
+        const img = document.createElement("img");
+        img.src = fileName;
+        
+        itemWrapper.onclick = () => selectAvatarNode(fileName, i);
+        itemWrapper.appendChild(img);
+        container.appendChild(itemWrapper);
+      }
+    }
+
+    function selectAvatarNode(fileName, index) {
+      localSelectedAvatar = fileName;
+      document.getElementById("current-avatar-display").src = fileName;
+
+      for (let i = 1; i <= 8; i++) {
+        const wrapper = document.getElementById(`avatar-frame-${i}`);
+        if (wrapper) { wrapper.style.opacity = "0.5"; }
+      }
+
+      const target = document.getElementById(`avatar-frame-${index}`);
+      if (target) { target.style.opacity = "1"; }
+    }
+
+    function initializeUserSession() {
+      activeSessionUser = localStorage.getItem("streetvoice_current_user") || "SV-DAD-GHOSTRIDER-3794";
+      document.getElementById("input-node-id").value = activeSessionUser;
+      document.getElementById("node-id-title").textContent = activeSessionUser;
+
+      if (!window.db) {
+        const city = localStorage.getItem("streetvoice_user_city") || "Dadar";
+        document.getElementById("input-node-city").value = city;
+        document.getElementById("node-city-subtitle").textContent = `JURISDICTION: ${city.toUpperCase()}`;
+        localSelectedAvatar = localStorage.getItem("streetvoice_user_avatar") || "pfp1.png";
+        selectAvatarNode(localSelectedAvatar, parseInt(localSelectedAvatar.replace(/^\D+/g, '')) || 1);
+        return;
+      }
+
+      db.ref(`users/${activeSessionUser}`).once('value').then(snap => {
+        const data = snap.val();
+        if (data) {
+          document.getElementById("input-node-city").value = data.city || "Dadar";
+          document.getElementById("node-city-subtitle").textContent = `JURISDICTION: ${(data.city || 'Dadar').toUpperCase()}`;
+          localSelectedAvatar = data.avatar || "pfp1.png";
+          selectAvatarNode(localSelectedAvatar, parseInt(localSelectedAvatar.replace(/^\D+/g, '')) || 1);
+        }
+      });
+    }
+
+    function commitProfileChanges() {
+      const targetCity = document.getElementById("input-node-city").value.trim() || "Dadar";
+      localStorage.setItem("streetvoice_user_city", targetCity);
+      localStorage.setItem("streetvoice_user_avatar", localSelectedAvatar);
+      document.getElementById("node-city-subtitle").textContent = `JURISDICTION: ${targetCity.toUpperCase()}`;
+
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+
+      if (window.db) {
+        db.ref(`users/${activeSessionUser}`).update({ city: targetCity, avatar: localSelectedAvatar });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setGlobalEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
+      buildAvatarSelectionGrid();
+      initializeUserSession();
+    });
+  </script>
+</body>
+</html>

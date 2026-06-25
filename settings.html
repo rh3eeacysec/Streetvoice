@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — System Preferences</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ==========================================================================
+       THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #eab308; 
+      --radius: 24px; 
+      --font: 'Courier New', monospace;
+      --brand-color: #eab308;
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --text: #f8fafc; 
+      --accent: #38bdf8; 
+      --border: #334155; 
+      --radius: 20px; 
+      --font: system-ui, -apple-system, sans-serif;
+      --brand-color: #ffb59d;
+    }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font); 
+      transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease; 
+    }
+    .glass { 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      backdrop-filter: blur(16px);
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+    .brand-text { color: var(--brand-color); }
+  </style>
+</head>
+<body class="p-4 md:p-12 min-h-screen flex flex-col justify-center items-center">
+
+  <header class="w-full max-w-3xl mb-6">
+    <a href="#" class="brand-text text-sm font-bold flex items-center gap-2 hover:opacity-80 transition">
+      <span>← Return to Live Pipeline Monitor</span>
+    </a>
+  </header>
+
+  <main class="w-full max-w-3xl glass p-6 md:p-8 shadow-2xl">
+    
+    <div class="mb-8 border-b border-white/5 pb-4">
+      <h2 class="text-2xl font-black tracking-tight">System Preferences</h2>
+      <p class="text-xs opacity-60 mt-1">Configure your orchestration matrix client environment variables.</p>
+    </div>
+    
+    <div class="space-y-8">
+      
+      <div>
+        <label class="block font-mono text-[11px] font-bold uppercase tracking-wider opacity-70 mb-2">
+          Interface Generation Era
+        </label>
+        <div class="relative">
+          <select id="era-selector" onchange="applyGlobalEra(this.value)" class="w-full p-3.5 bg-black/30 border border-white/10 rounded-xl appearance-none focus:outline-none focus:border-[var(--accent)] transition cursor-pointer font-medium text-sm text-inherit">
+            <option value="modern" class="bg-slate-900 text-slate-100">Modern (Default UI)</option>
+            <option value="y2k" class="bg-[#0b0117] text-[#fef08a]">Y2K (Retro Cyberpunk)</option>
+            <option value="90s" class="bg-[#fcfbf7] text-[#111111]">90s (Legacy Print Monomorphic)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 opacity-50">
+            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      <div class="border-t border-white/5 pt-6 space-y-6">
+        
+        <div class="flex justify-between items-center py-1">
+          <div class="pr-4">
+            <span class="font-bold text-sm block">Push Escalation Incident Alerts</span>
+            <span class="text-xs opacity-50 block mt-0.5">Dispatches high-priority web pings when processing nodes report SLA breeches.</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-black/40 rounded-full border border-white/10 peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent)] shadow-inner"></div>
+          </label>
+        </div>
+        
+        <div class="flex justify-between items-center py-1">
+          <div class="pr-4">
+            <span class="font-bold text-sm block">Render Dynamic SVG Blueprint Paths</span>
+            <span class="text-xs opacity-50 block mt-0.5">Calculates geometric vector paths between timeline nodes in realtime.</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-black/40 rounded-full border border-white/10 peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent)] shadow-inner"></div>
+          </label>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // Theme Engine Router Core Functionality
+    function applyGlobalEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+    }
+
+    // Sync state settings local layout variables on initialize
+    window.onload = function() {
+      const activeTheme = localStorage.getItem('streetvoice_era_theme') || 'modern';
+      document.documentElement.setAttribute('data-theme', activeTheme);
+      
+      const dropdown = document.getElementById('era-selector');
+      if (dropdown) {
+        dropdown.value = activeTheme;
+      }
+    };
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — RiskMap Node</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* ==========================================================================
+       THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+      --btn-text: #ffffff;
+      --map-filter: none;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #eab308; 
+      --radius: 24px; 
+      --font: 'Courier New', monospace;
+      --brand-color: #eab308;
+      --btn-text: #1e003b;
+      --map-filter: invert(100%) hue-rotate(120deg) brightness(90%) contrast(110%) saturate(150%);
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --text: #f8fafc; 
+      --accent: #38bdf8; 
+      --border: #334155; 
+      --radius: 16px; 
+      --font: system-ui, -apple-system, sans-serif;
+      --brand-color: #ffb59d;
+      --btn-text: #0f172a;
+      --map-filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font); 
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s; 
+      overflow-x: hidden; 
+    }
+    .glass { 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      backdrop-filter: blur(16px);
+    }
+    .brand-text { color: var(--brand-color); }
+    .accent { background: var(--accent); color: var(--btn-text); font-weight: 800; }
+    .glass-tilt { transform-style: preserve-3d; perspective: 1000px; }
+    .glass-glow { background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.05), transparent 70%); }
+    
+    /* Hardware-accelerated presentation wrapper for custom tiled maps */
+    #leaflet-map {
+      width: 100%;
+      height: 100%;
+      background: #090d16;
+    }
+    .leaflet-tile-container {
+      filter: var(--map-filter);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  </style>
+</head>
+<body class="p-4 md:p-6 min-h-screen">
+
+  <header class="w-full max-w-7xl mx-auto mb-6 flex flex-wrap justify-between items-center gap-3 animate-fade-up">
+    <a href="dashboard.html" class="brand-text text-xl font-black flex items-center gap-2">
+      <span>← StreetVoice Workspace</span>
+    </a>
+    
+    <div class="flex flex-wrap gap-3">
+      <div class="glass px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75">Language / भाषा:</span>
+        <button onclick="updatePageLanguage('en')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">English</button>
+        <button onclick="updatePageLanguage('hi')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">हिन्दी</button>
+      </div>
+
+      <div class="glass px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75" id="lbl-switch-era">Design Generation:</span>
+        <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
+        <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
+        <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    
+    <div class="glass glass-tilt glass-glow p-5 lg:col-span-2 flex flex-col justify-between shadow-xl animate-fade-up" style="animation-delay: 0.1s;" data-tilt data-tilt-max="3" data-tilt-speed="400">
+      <div class="mb-4 flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-black tracking-tight" id="txt-title">Geospatial Risk Layer</h2>
+          <p class="text-xs opacity-75 mt-0.5" id="lbl-map-desc">Real-time localized cluster telemetry mapping vector data.</p>
+        </div>
+      </div>
+      
+      <div class="relative bg-black/40 border rounded-xl overflow-hidden aspect-[16/10]" style="border-color: var(--border); min-height: 400px; z-index: 10;">
+        <div id="leaflet-map"></div>
+      </div>
+    </div>
+
+    <div class="glass p-5 flex flex-col justify-between text-xs space-y-4 shadow-xl animate-fade-up" style="animation-delay: 0.2s;">
+      <div class="space-y-4">
+        <h3 class="text-lg font-black tracking-tight" id="lbl-panel-title">Node Analytics</h3>
+        <hr class="border-white/10" style="border-color: var(--border);" />
+        
+        <div class="space-y-3">
+          <div class="p-3 rounded-lg bg-white/5 border" style="border-color: var(--border); border-radius: var(--radius);">
+            <strong class="block text-sm brand-text mb-0.5" id="lbl-stat1-title">Active Outages</strong>
+            <p class="opacity-80 font-mono text-cyan-400" id="lbl-stat1-desc">Evaluating incoming pipeline data streams...</p>
+          </div>
+          
+          <div class="p-3 rounded-lg bg-white/5 border" style="border-color: var(--border); border-radius: var(--radius);">
+            <strong class="block text-sm brand-text mb-0.5" id="lbl-stat2-title">Response Delta</strong>
+            <p class="opacity-80 font-mono" id="lbl-stat2-desc">Awaiting calculated risk factors...</p>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="recenterMapToDefault()" class="w-full accent py-3.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-md" style="border-radius: var(--radius);">
+        <span id="lbl-btn-refresh">Recenter Map Matrix</span>
+      </button>
+    </div>
+  </main>
+
+  <script>
+    const locales = {
+      en: {
+        switchEra: "Design Generation:",
+        mapTitle: "Geospatial Risk Layer",
+        mapDesc: "Real-time localized cluster telemetry mapping vector data.",
+        panelTitle: "Node Analytics",
+        stat1Title: "Active Incidents",
+        stat2Title: "System Risk Allocation",
+        btnRefresh: "Recenter Map Matrix"
+      },
+      hi: {
+        switchEra: "डिज़ाइन जनरेशन:",
+        mapTitle: "जियोस्पेशियल जोखिम स्तर",
+        mapDesc: "वास्तविक समय में स्थानीय क्लस्टर टेलीमेट्री मैपिंग डेटा।",
+        panelTitle: "नोड विश्लेषण",
+        stat1Title: "सक्रिय समस्याएं",
+        stat2Title: "प्रणाली जोखिम आवंटन",
+        btnRefresh: "मैप रीसेंटर करें"
+      }
+    };
+
+    let currentLanguage = 'en';
+    let mapInstance = null;
+    let markersLayerGroup = null;
+    let liveReportNodes = [];
+
+    function setEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+    }
+
+    function updatePageLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+      const dict = locales[lang];
+
+      document.getElementById("lbl-switch-era").textContent = dict.switchEra;
+      document.getElementById("txt-title").textContent = dict.mapTitle;
+      document.getElementById("lbl-map-desc").textContent = dict.mapDesc;
+      document.getElementById("lbl-panel-title").textContent = dict.panelTitle;
+      document.getElementById("lbl-stat1-title").textContent = dict.stat1Title;
+      document.getElementById("lbl-stat2-title").textContent = dict.stat2Title;
+      document.getElementById("lbl-btn-refresh").textContent = dict.btnRefresh;
+      
+      updateAnalyticsPanelText();
+    }
+
+    function initLeafletMapSystem() {
+      // Initialize core canvas frame centered on the Mumbai geographic intersection
+      mapInstance = L.map('leaflet-map', {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([19.0760, 72.8777], 12);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(mapInstance);
+
+      markersLayerGroup = L.layerGroup().addTo(mapInstance);
+
+      // Bind socket logic onto live Firebase cluster
+      listenToFirebaseCoordinates();
+    }
+
+    function listenToFirebaseCoordinates() {
+      if (!window.db) {
+        console.warn("Database initialization failed. Check firebase-config.js mapping parameters.");
+        return;
+      }
+
+      db.ref('reports').on('value', (snapshot) => {
+        markersLayerGroup.clearLayers();
+        const data = snapshot.val() || {};
+        
+        liveReportNodes = Object.keys(data).map(key => ({
+          id: key,
+          ...data[key]
+        }));
+
+        updateAnalyticsPanelText();
+
+        liveReportNodes.forEach((report) => {
+          // Verify existence of valid spatial coordinates; default fallback values applied otherwise
+          const latitude = parseFloat(report.lat) || 19.0760;
+          const longitude = parseFloat(report.lng) || 72.8777;
+
+          // Color classification array linked against critical state factors
+          let boundaryColor = '#38bdf8'; // LOW / Standard color
+          if (report.severity === 'MEDIUM') boundaryColor = '#eab308';
+          if (report.severity === 'HIGH' || report.severity === 'CRITICAL') boundaryColor = '#ef4444';
+
+          const radialRadius = report.severity === 'CRITICAL' ? 16 : 10;
+
+          const marker = L.circleMarker([latitude, longitude], {
+            radius: radialRadius,
+            fillColor: boundaryColor,
+            color: '#ffffff',
+            weight: 2,
+            fillOpacity: 0.75
+          });
+
+          // Embed standard terminal readout inside the Leaflet popup
+          const contextCard = `
+            <div style="color:#0f172a; font-family:monospace; font-size:11px; line-height:1.4;">
+              <strong style="text-transform:uppercase; color:${boundaryColor === '#ffffff' ? '#0f172a' : boundaryColor}; font-size:12px;">[${report.severity || 'LOW'}] ${report.category}</strong><br/>
+              <span style="opacity:0.7;">Loc: ${report.location || 'MUMBAI'}</span><br/>
+              <p style="margin-top:4px; font-style:italic; border-top:1px solid #ddd; padding-top:4px;">"${report.desc}"</p>
+            </div>
+          `;
+
+          marker.bindPopup(contextCard);
+          markersLayerGroup.addLayer(marker);
+        });
+      }, (error) => {
+        console.error("Geospatial Firebase extraction thread failed:", error);
+      });
+    }
+
+    function updateAnalyticsPanelText() {
+      const activeCount = liveReportNodes.length;
+      const criticalNode = liveReportNodes.find(n => n.severity === 'CRITICAL' || n.severity === 'HIGH');
+      
+      const countDesc = currentLanguage === 'hi' 
+        ? `${activeCount} सक्रिय क्षेत्र वर्तमान में मैप किए गए हैं।` 
+        : `${activeCount} tracking nodes active across local coordinate arrays.`;
+        
+      const responseDesc = currentLanguage === 'hi'
+        ? `उच्चतम जोखिम स्तर: ${criticalNode ? criticalNode.severity : 'NORMAL'} — प्रणाली सतर्क है।`
+        : `Peak Severity Level: ${criticalNode ? criticalNode.severity : 'LOW'} — Mapping vectors fully synced.`;
+
+      document.getElementById("lbl-stat1-desc").textContent = countDesc;
+      
+      const responseEl = document.getElementById("lbl-stat2-desc");
+      responseEl.textContent = responseDesc;
+      
+      if (criticalNode) {
+        responseEl.className = "opacity-90 font-bold text-red-500 animate-pulse";
+      } else {
+        responseEl.className = "opacity-80 font-mono text-emerald-400";
+      }
+    }
+
+    function recenterMapToDefault() {
+      if (mapInstance) {
+        mapInstance.setView([19.0760, 72.8777], 12);
+      }
+    }
+
+    VanillaTilt.init(document.querySelector(".glass-tilt"), { max: 3, speed: 400, glare: true, "max-glare": 0.05 });
+
+    const container = document.querySelector(".glass-glow");
+    container.addEventListener("mousemove", (e) => {
+      const rect = container.getBoundingClientRect();
+      container.style.setProperty('--x', `${e.clientX - rect.left}px`);
+      container.style.setProperty('--y', `${e.clientY - rect.top}px`);
+    });
+
+    window.onload = function() {
+      const activeEra = localStorage.getItem('streetvoice_era_theme') || 'modern';
+      setEra(activeEra);
+      
+      const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
+      updatePageLanguage(savedLang);
+      
+      initLeafletMapSystem();
+    };
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreetVoice - Welcome</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fade-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .animate-scale { animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    /* ==========================================
+       GENERATION 1: MODERN CIVIC HERO (DEFAULT)
+       ========================================== */
+    html[data-theme="modern"] body {
+      background: linear-gradient(rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0.95)),
+                  url("https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1800&q=80");
+      background-size: cover;
+      background-position: center;
+      color: #fff7f2;
+    }
+    html[data-theme="modern"] .glass {
+      background: rgba(25, 22, 28, 0.85);
+      border: 1px solid rgba(255, 181, 157, 0.15);
+      backdrop-filter: blur(16px);
+    }
+    html[data-theme="modern"] .brand-text { color: #ffb59d; }
+    html[data-theme="modern"] .accent { background: #ff6b35; color: #390c00; font-weight: 800; }
+    html[data-theme="modern"] .accent:hover { background: #ff875c; transform: translateY(-2px); }
+    html[data-theme="modern"] .soft-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); }
+    html[data-theme="modern"] .input {
+      width: 100%; border: 1px solid rgba(255, 181, 157, 0.2); background: rgba(255, 255, 255, 0.05);
+      color: #fff7f2; border-radius: 12px; padding: 14px 16px; outline: none; transition: all 0.2s;
+    }
+
+    /* ==========================================
+       GENERATION 2: Y2K HIGH-IMPACT (PURPLE & CYBER-YELLOW)
+       ========================================== */
+    html[data-theme="y2k"] body { background: linear-gradient(135deg, #1f053a 0%, #0b0117 100%); color: #fef08a; }
+    html[data-theme="y2k"] .glass {
+      background: rgba(24, 3, 48, 0.85); border: 2px solid #eab308;
+      box-shadow: 0 0 25px rgba(234, 179, 8, 0.25); border-radius: 24px !important; backdrop-filter: blur(20px);
+    }
+    html[data-theme="y2k"] .brand-text { color: #eab308; font-weight: 900; text-shadow: 0 0 10px rgba(234,179,8,0.4); }
+    html[data-theme="y2k"] .accent { background: #eab308; color: #1e003b; border-radius: 16px !important; font-weight: 900; box-shadow: 0 4px 14px rgba(234,179,8,0.4); }
+    html[data-theme="y2k"] .accent:hover { background: #facc15; transform: scale(1.02); }
+    html[data-theme="y2k"] .soft-card { background: rgba(234, 179, 8, 0.07); border: 1px dashed #eab308; border-radius: 16px !important; }
+    html[data-theme="y2k"] .input {
+      width: 100%; border: 2px solid #eab308; background: #0b0117; color: #ffffff;
+      border-radius: 16px; padding: 14px 16px; outline: none; transition: all 0.2s;
+    }
+    html[data-theme="y2k"] .input::placeholder { color: rgba(254, 240, 138, 0.5); }
+    html[data-theme="y2k"] .btn-return { border-radius: 16px !important; background: #4c1d95 !important; color: #ffffff !important; border: 1px solid #eab308; }
+
+    /* ==========================================
+       GENERATION 3: 90s CIVIC NEWS GAZETTE (EDITORIAL LIGHT)
+       ========================================== */
+    html[data-theme="90s"] body { background: #fcfbf7; color: #111111; }
+    html[data-theme="90s"] .glass { background: #ffffff; border: 3px double #222222; border-radius: 0px !important; }
+    html[data-theme="90s"] .brand-text { color: #111111; font-family: serif; font-weight: 900; text-decoration: underline; }
+    html[data-theme="90s"] .accent { background: #111111; color: #ffffff; border-radius: 0px !important; }
+    html[data-theme="90s"] .accent:hover { background: #333333; }
+    html[data-theme="90s"] .soft-card { background: #f4f3ef; border: 1px solid #222222; border-radius: 0px !important; }
+    html[data-theme="90s"] .input {
+      width: 100%; border: 1px solid #222222; background: #fcfbf7; color: #111111; border-radius: 0px; padding: 12px; outline: none;
+    }
+
+    .success { color: #4ade80; }
+    html[data-theme="90s"] .success { color: #15803d; font-weight: bold; }
+    .error { color: #f87171; }
+    html[data-theme="90s"] .error { color: #b91c1c; font-weight: bold; }
+  </style>
+</head>
+<body class="overflow-x-hidden">
+
+  <!-- TOP BAR CONTROL CONFIGURATORS -->
+  <header class="w-full max-w-6xl mx-auto pt-6 px-5 flex flex-wrap justify-end gap-3 animate-fade-up">
+    <!-- Language Selector -->
+    <div class="glass px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-md">
+      <span class="opacity-75">Language / भाषा:</span>
+      <button onclick="updatePageLanguage('en')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">English</button>
+      <button onclick="updatePageLanguage('hi')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">हिन्दी</button>
+    </div>
+
+    <!-- Era Selector -->
+    <div class="glass px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-md">
+      <span class="opacity-75" id="lbl-switch-era">Design Generation:</span>
+      <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
+      <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
+      <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+    </div>
+  </header>
+
+  <main class="min-h-[calc(100vh-60px)] grid place-items-center px-5 py-6">
+    <section class="w-full max-w-6xl grid lg:grid-cols-[1.1fr_0.9fr] gap-6 items-stretch">
+
+      <!-- LEFT SIDE PANEL: VALUE PROPOSITION MARKETING -->
+      <div class="glass rounded-2xl p-7 md:p-10 flex flex-col justify-between shadow-xl animate-fade-up" style="animation-delay: 0.1s;">
+        <div>
+          <div class="inline-flex items-center gap-3 mb-8">
+            <div class="w-12 h-12 rounded-full accent grid place-items-center text-lg font-black shadow-inner">SV</div>
+            <div>
+              <h1 class="text-3xl md:text-4xl font-black tracking-tight brand-text">StreetVoice</h1>
+              <p class="text-sm opacity-75" id="lbl-sub-brand">Your community, amplified.</p>
+            </div>
+          </div>
+
+          <p class="uppercase tracking-[0.2em] text-xs font-black brand-text mb-4" id="lbl-tagline">
+            AI-Multimodal Civic Reporting Engine
+          </p>
+
+          <h2 class="text-4xl md:text-5xl lg:text-6xl font-black leading-[1.05] max-w-2xl tracking-tight" id="lbl-hero-headline">
+            Upload media.<br>Speak your mind.<br>AI drives the fix.
+          </h2>
+
+          <p class="mt-6 text-lg opacity-80 max-w-xl leading-relaxed" id="lbl-hero-subtext">
+            Eliminate traditional complaint forms. StreetVoice converts physical evidence and native voice notes (Hindi, English, or Hinglish) into machine-parsable, structurally routed civic records within seconds.
+          </p>
+        </div>
+
+        <!-- Metric Highlight Callout Blocks -->
+        <div class="grid sm:grid-cols-3 gap-3 mt-10 animate-scale" style="animation-delay: 0.3s;">
+          <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
+            <strong class="block text-xl brand-text" id="lbl-feat1-title">Multimodal</strong>
+            <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat1-desc">Zero-typing context generation.</span>
+          </div>
+          <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
+            <strong class="block text-xl brand-text" id="lbl-feat2-title">Bilingual</strong>
+            <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat2-desc">Native audio auto-translation.</span>
+          </div>
+          <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
+            <strong class="block text-xl brand-text" id="lbl-feat3-title">Incentivized</strong>
+            <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat3-desc">Earn rewards for verified reports.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDE PANEL: INTERACTIVE ACCOUNT MANAGER -->
+      <div class="glass rounded-2xl p-7 md:p-8 space-y-5 animate-fade-up" style="animation-delay: 0.2s;">
+        <div class="mb-2">
+          <h2 class="text-2xl md:text-3xl font-black tracking-tight" id="lbl-portal-title">Citizen Portal</h2>
+          <p class="opacity-75 mt-1 text-sm" id="lbl-portal-sub">
+            Initialize an identity sequence to log structural metrics across your local area.
+          </p>
+        </div>
+
+        <!-- Registration Card Container -->
+        <div class="soft-card rounded-2xl p-5 shadow-sm">
+          <h3 class="text-lg font-bold mb-1" id="lbl-reg-title">Generate Citizen Profile</h3>
+          <p class="text-xs opacity-60 mb-4" id="lbl-reg-sub">Provision a localized node token linked directly to your district boundary.</p>
+
+          <form id="new-user-form" class="space-y-3">
+            <input class="input" id="new-name" type="text" placeholder="Full Name" required />
+            <input class="input" id="new-city" type="text" placeholder="Target Municipality / City" required />
+            <input class="input" id="new-email" type="email" placeholder="Email Address (Optional)" />
+
+            <button class="w-full accent rounded-xl py-3.5 font-black transition-all uppercase tracking-wider text-xs" type="submit" id="btn-reg-submit">
+              Initialize Account Matrix
+            </button>
+          </form>
+          <p id="new-user-message" class="text-sm mt-3"></p>
+        </div>
+
+        <!-- Account Recovery / Mounting Container -->
+        <div class="soft-card rounded-2xl p-5 shadow-sm">
+          <h3 class="text-lg font-bold mb-1" id="lbl-login-title">Access Existing Node</h3>
+          <p class="text-xs opacity-60 mb-4" id="lbl-login-sub">Input your established alphanumeric token string.</p>
+
+          <form id="old-user-form" class="space-y-3">
+            <input class="input" id="old-id" type="text" placeholder="e.g., SV-MUM-RHEA-4821" required />
+
+            <button class="w-full bg-white text-[#1d100c] btn-return rounded-xl py-3.5 font-black transition-all uppercase tracking-wider text-xs" type="submit" id="btn-login-submit">
+              Mount Core Session
+            </button>
+          </form>
+          <p id="old-user-message" class="text-sm mt-3"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // System Localization Mapping Dictionary
+    const locales = {
+      en: {
+        switchEra: "Design Generation:",
+        subBrand: "Your community, amplified.",
+        tagline: "AI-Multimodal Civic Reporting Engine",
+        heroHeadline: "Upload media.<br>Speak your mind.<br>AI drives the fix.",
+        heroSubtext: "Eliminate traditional complaint forms. StreetVoice converts physical evidence and native voice notes (Hindi, English, or Hinglish) into machine-parsable, structurally routed civic records within seconds.",
+        feat1Title: "Multimodal",
+        feat1Desc: "Zero-typing context generation.",
+        feat2Title: "Bilingual",
+        feat2Desc: "Native audio auto-translation.",
+        feat3Title: "Incentivized",
+        feat3Desc: "Earn rewards for verified reports.",
+        portalTitle: "Citizen Portal",
+        portalSub: "Initialize an identity sequence to log structural metrics across your local area.",
+        regTitle: "Generate Citizen Profile",
+        regSub: "Provision a localized node token linked directly to your district boundary.",
+        regSubmit: "Initialize Account Matrix",
+        loginTitle: "Access Existing Node",
+        loginSub: "Input your established alphanumeric token string.",
+        loginSubmit: "Mount Core Session",
+        placeholderName: "Full Name",
+        placeholderCity: "Target Municipality / City",
+        placeholderEmail: "Email Address (Optional)",
+        placeholderToken: "e.g., SV-MUM-RHEA-4821",
+        msgSuccess: "Success! Account Assigned: ",
+        msgWelcomeBack: "Welcome back. Syncing profile metrics...",
+        msgErrNotFound: "Identifier not found. Please review the key entry."
+      },
+      hi: {
+        switchEra: "डिज़ाइन जनरेशन:",
+        subBrand: "आपका समुदाय, आपकी आवाज़।",
+        tagline: "एआई-मल्टीमॉडल नागरिक रिपोर्टिंग इंजन",
+        heroHeadline: "मीडिया अपलोड करें।<br>अपनी बात बोलें।<br>एआई करेगा समाधान।",
+        heroSubtext: "पारंपरिक शिकायत फॉर्मों का झंझट खत्म करें। स्ट्रीटवॉइस आपके फोटो/वीडियो साक्ष्य और स्थानीय वॉयस नोट्स (हिन्दी, अंग्रेजी या हिंग्लिश) को कुछ ही सेकंड में आधिकारिक डिजिटल रिकॉर्ड में बदल देता है।",
+        feat1Title: "मल्टीमॉडल साक्ष्य",
+        feat1Desc: "बिना टाइप किए सीधे रिपोर्ट बनाएं।",
+        feat2Title: "द्विभाषी सपोर्ट",
+        feat2Desc: "स्थानीय ऑडियो का स्वचालित अनुवाद।",
+        feat3Title: "पुरस्कार अंक",
+        feat3Desc: "सत्यापित रिपोर्टों पर इनाम पाएं।",
+        portalTitle: "नागरिक पोर्टल",
+        portalSub: "अपने क्षेत्र की समस्याओं को दर्ज करने के लिए अपनी डिजिटल पहचान सक्रिय करें।",
+        regTitle: "नया नागरिक प्रोफाइल बनाएं",
+        regSub: "अपने नगरपालिका क्षेत्र से जुड़ा एक सुरक्षित डिजिटल टोकन प्राप्त करें।",
+        regSubmit: "अकाउंट एक्टिवेट करें",
+        loginTitle: "मौजूदा नोड एक्सेस करें",
+        loginSub: "अपनी स्थापित अल्फ़ान्यूमेरिक टोकन आईडी दर्ज करें।",
+        loginSubmit: "प्रोफ़ाइल लोड करें",
+        placeholderName: "आपका पूरा नाम",
+        placeholderCity: "शहर / नगर पालिका",
+        placeholderEmail: "ईमेल आईडी (वैकल्पिक)",
+        placeholderToken: "जैसे: SV-MUM-RHEA-4821",
+        msgSuccess: "सफलता! नया अकाउंट आईडी: ",
+        msgWelcomeBack: "स्वागत है। प्रोफाइल डेटा लोड हो रहा है...",
+        msgErrNotFound: "पहचानकर्ता नहीं मिला। कृपया अपनी टोकन कुंजी दोबारा जांचें।"
+      }
+    };
+
+    let currentLanguage = 'en';
+
+    function setEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+    }
+
+    function updatePageLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+      const dict = locales[lang];
+
+      // Structural UI Element Content Injections
+      document.getElementById("lbl-switch-era").textContent = dict.switchEra;
+      document.getElementById("lbl-sub-brand").textContent = dict.subBrand;
+      document.getElementById("lbl-tagline").textContent = dict.tagline;
+      document.getElementById("lbl-hero-headline").innerHTML = dict.heroHeadline;
+      document.getElementById("lbl-hero-subtext").textContent = dict.heroSubtext;
+      
+      document.getElementById("lbl-feat1-title").textContent = dict.feat1Title;
+      document.getElementById("lbl-feat1-desc").textContent = dict.feat1Desc;
+      document.getElementById("lbl-feat2-title").textContent = dict.feat2Title;
+      document.getElementById("lbl-feat2-desc").textContent = dict.feat2Desc;
+      document.getElementById("lbl-feat3-title").textContent = dict.feat3Title;
+      document.getElementById("lbl-feat3-desc").textContent = dict.feat3Desc;
+
+      document.getElementById("lbl-portal-title").textContent = dict.portalTitle;
+      document.getElementById("lbl-portal-sub").textContent = dict.portalSub;
+      document.getElementById("lbl-reg-title").textContent = dict.regTitle;
+      document.getElementById("lbl-reg-sub").textContent = dict.regSub;
+      document.getElementById("btn-reg-submit").textContent = dict.regSubmit;
+      
+      document.getElementById("lbl-login-title").textContent = dict.loginTitle;
+      document.getElementById("lbl-login-sub").textContent = dict.loginSub;
+      document.getElementById("btn-login-submit").textContent = dict.loginSubmit;
+
+      // HTML Dynamic Text Element Placeholders Injection
+      document.getElementById("new-name").placeholder = dict.placeholderName;
+      document.getElementById("new-city").placeholder = dict.placeholderCity;
+      document.getElementById("new-email").placeholder = dict.placeholderEmail;
+      document.getElementById("old-id").placeholder = dict.placeholderToken;
+    }
+
+    function generateStreetVoiceId(name, city) {
+      const cleanName = name.trim().split(" ")[0].replace(/[^a-zA-Z]/g, "").toUpperCase();
+      const cleanCity = city.trim().replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase();
+      const random = Math.floor(1000 + Math.random() * 9000);
+      return `SV-${cleanCity || "CTY"}-${cleanName || "USER"}-${random}`;
+    }
+
+    function getInitials(name) {
+      return name.trim().split(" ").filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join("");
+    }
+
+    function getUserById(id) {
+      return JSON.parse(localStorage.getItem(`streetvoice_user_${id}`));
+    }
+
+    // New Profile Creation Dispatcher
+    document.getElementById("new-user-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const name = document.getElementById("new-name").value.trim();
+      const city = document.getElementById("new-city").value.trim();
+      const email = document.getElementById("new-email").value.trim();
+      const message = document.getElementById("new-user-message");
+      const dict = locales[currentLanguage];
+
+      let id = generateStreetVoiceId(name, city);
+      while (getUserById(id)) { id = generateStreetVoiceId(name, city); }
+
+      const user = {
+        id, name, initials: getInitials(name), city, email,
+        level: 1, streetCredits: 100,
+        stats: { reported: 0, verified: 0 },
+        reports: []
+      };
+
+      localStorage.setItem(`streetvoice_user_${id}`, JSON.stringify(user));
+      localStorage.setItem("streetvoice_current_user", id);
+
+      message.textContent = `${dict.msgSuccess}${id}`;
+      message.className = "text-sm mt-3 success";
+      setTimeout(() => { window.location.href = "dashboard.html"; }, 900);
+    });
+
+    // Session Verification Listener
+    document.getElementById("old-user-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const enteredId = document.getElementById("old-id").value.trim().toUpperCase();
+      const message = document.getElementById("old-user-message");
+      const dict = locales[currentLanguage];
+      const user = getUserById(enteredId);
+
+      if (!user) {
+        message.textContent = dict.msgErrNotFound;
+        message.className = "text-sm mt-3 error";
+        return;
+      }
+
+      localStorage.setItem("streetvoice_current_user", user.id);
+      message.textContent = dict.msgWelcomeBack;
+      message.className = "text-sm mt-3 success";
+      setTimeout(() => { window.location.href = "dashboard.html"; }, 700);
+    });
+
+    // Configuration Initialization
+    window.onload = function() {
+      const activeEra = localStorage.getItem('streetvoice_era_theme') || 'modern';
+      setEra(activeEra);
+      
+      const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
+      updatePageLanguage(savedLang);
+    };
+  </script>
+</body>
+<script src="cursor.js"></script>
+</html>

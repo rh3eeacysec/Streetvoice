@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — Live Orchestration Monitor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ==========================================================================
+       THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+      --btn-text: #ffffff;
+      --svg-line: #222222;
+      --glow: transparent;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #eab308; 
+      --radius: 24px; 
+      --font: 'Courier New', monospace;
+      --brand-color: #eab308;
+      --btn-text: #1e003b;
+      --svg-line: #eab308;
+      --glow: rgba(234, 179, 8, 0.3);
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --text: #f8fafc; 
+      --accent: #38bdf8; 
+      --border: #334155; 
+      --radius: 20px; 
+      --font: system-ui, -apple-system, sans-serif;
+      --brand-color: #ffb59d;
+      --btn-text: #0f172a;
+      --svg-line: #38bdf8;
+      --glow: rgba(56, 189, 248, 0.25);
+    }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font); 
+      transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease; 
+      overflow-x: hidden;
+    }
+    .glass { 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      backdrop-filter: blur(16px);
+    }
+    .brand-text { color: var(--brand-color); }
+    
+    /* Cinematic Focus Alignment States */
+    .agent-card { 
+      opacity: 0.4; 
+      transform: scale(0.95); 
+      transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
+                  transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
+                  border-color 0.4s, box-shadow 0.4s; 
+      position: relative; 
+      z-index: 10; 
+    }
+    
+    /* Active Zoom-In States Triggered via Pipeline Engine */
+    .agent-card.border-accent, .agent-card.active { 
+      opacity: 1 !important; 
+      transform: scale(1.05) translateY(-4px) !important; 
+      border-color: var(--accent) !important; 
+      box-shadow: 0 20px 40px -10px var(--glow); 
+    }
+    
+    .avatar { width: 50px; height: 50px; display: grid; place-items: center; font-size: 24px; border-radius: calc(var(--radius) / 1.5); }
+    .pulse-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; position: relative; }
+    
+    /* Indeterminate Active CSS Animation State */
+    .progress { 
+      height: 100%; 
+      background: var(--accent); 
+      width: 0%; 
+      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .active .progress {
+      width: 40%;
+      animation: dynamicPulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes dynamicPulse {
+      0% { margin-left: 0%; width: 30%; }
+      50% { margin-left: 70%; width: 30%; }
+      100% { margin-left: 0%; width: 30%; }
+    }
+
+    /* SVG Matrix Canvas Vector Links */
+    .scroll-svg-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .scroll-path {
+      stroke: var(--svg-line);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      opacity: 0.12;
+    }
+    .scroll-path-fill {
+      stroke: var(--svg-line);
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      filter: drop-shadow(0px 0px 4px var(--accent));
+      stroke-dasharray: 2000;
+      stroke-dashoffset: 2000;
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="p-4 md:p-6 min-h-screen relative">
+
+  <svg class="scroll-svg-canvas" id="matrix-canvas">
+    <path id="bg-path-1" class="scroll-path" />
+    <path id="fill-path-1" class="scroll-path-fill" />
+    
+    <path id="bg-path-2" class="scroll-path" />
+    <path id="fill-path-2" class="scroll-path-fill" />
+    
+    <path id="bg-path-3" class="scroll-path" />
+    <path id="fill-path-3" class="scroll-path-fill" />
+    
+    <path id="bg-path-4" class="scroll-path" />
+    <path id="fill-path-4" class="scroll-path-fill" />
+    
+    <path id="bg-path-5" class="scroll-path" />
+    <path id="fill-path-5" class="scroll-path-fill" />
+  </svg>
+
+  <header class="w-full max-w-5xl mx-auto mb-8 flex flex-wrap justify-between items-center gap-3 relative z-10">
+    <div class="flex items-center gap-4">
+      <a href="index.html" class="brand-text text-xl font-black flex items-center gap-2">
+        <span>← StreetVoice</span>
+      </a>
+      <a href="studio.html" class="glass px-4 py-2 text-xs font-bold hover:bg-white/10 transition">🎨 Studio</a>
+    </div>
+    
+    <div class="flex flex-wrap gap-3">
+      <div class="glass px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75">Language:</span>
+        <button onclick="updatePageLanguage('en')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">English</button>
+        <button onclick="updatePageLanguage('hi')" class="px-2 py-0.5 rounded hover:bg-white/10 transition">हिन्दी</button>
+      </div>
+
+      <div class="glass px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75" id="lbl-switch-era">Design Generation:</span>
+        <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
+        <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
+        <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="w-full max-w-5xl mx-auto mb-12 p-4 glass relative z-10 text-center">
+    <span class="text-xs font-mono font-bold uppercase tracking-wider block mb-3 opacity-60">🔧 Live Event Ingest Simulator (Async Telemetry)</span>
+    <div class="flex flex-wrap justify-center gap-2">
+      <button onclick="triggerAgent('1')" class="bg-sky-500/20 hover:bg-sky-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-sky-500/40 transition">Trigger Parser (A1)</button>
+      <button onclick="triggerAgent('2')" class="bg-purple-500/20 hover:bg-purple-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-purple-500/40 transition">Trigger Vision (A2)</button>
+      <button onclick="triggerAgent('3')" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-emerald-500/40 transition">Trigger Scanner (A3)</button>
+      <button onclick="triggerAgent('4')" class="bg-amber-500/20 hover:bg-amber-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-amber-500/40 transition">Trigger Linker (A4)</button>
+      <button onclick="triggerAgent('5')" class="bg-pink-500/20 hover:bg-pink-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-pink-500/40 transition">Trigger Allocator (A5)</button>
+      <button onclick="triggerAgent('6')" class="bg-red-500/20 hover:bg-red-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-red-500/40 transition">Trigger SLA (A6)</button>
+      <button onclick="clearAllMonitorNodes()" class="bg-white/10 hover:bg-white/20 text-xs font-mono font-bold px-3 py-1.5 rounded transition ml-4">Reset Monitor</button>
+    </div>
+  </div>
+
+  <main class="w-full max-w-5xl mx-auto space-y-16 py-4 relative z-10">
+    
+    <div class="text-center mb-16">
+      <h2 class="text-3xl font-black tracking-tight" id="txt-title">Live Pipeline Monitor</h2>
+      <p class="opacity-70 text-xs mt-1" id="lbl-subtitle">Awaiting production report telemetry signals...</p>
+    </div>
+
+    <div class="space-y-24 relative w-full flex flex-col">
+      
+      <div class="w-full md:w-1/2 flex justify-start self-start">
+        <div data-agent="1" class="agent-card glass p-6 w-full max-w-md flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center gap-4 mb-4">
+              <div class="avatar bg-sky-500/20 border border-sky-500/30">👂</div>
+              <div>
+                <div class="text-[10px] font-mono opacity-50 tracking-widest font-bold">AGENT_01</div>
+                <h3 class="font-black text-base" id="lbl-a1-title">Linguistic Parser</h3>
+              </div>
+            </div>
+            <p class="text-xs opacity-75 leading-relaxed mb-6" id="lbl-a1-desc">Processes multi-lingual audio/slang into structured JSON.</p>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
+            <div class="pulse-bar"><div class="progress" id="p-1"></div></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="w-full md:w-1/2 flex justify-end self-end">
+        <div data-agent="2" class="agent-card glass p-6 w-full max-w-md flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center gap-4 mb-4">
+              <div class="avatar bg-purple-500/20 border border-purple-500/30">👁️</div>
+              <div>
+                <div class="text-[10px] font-mono opacity-50 tracking-widest font-bold">AGENT_02</div>
+                <h3 class="font-black text-base" id="lbl-a2-title">Vision Validator</h3>
+              </div>
+            </div>
+            <p class="text-xs opacity-75 leading-relaxed mb-6" id="lbl-a2-desc">Pixel-level inspection to verify infrastructure damage.</p>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
+            <div class="pulse-bar"><div class="progress" id="p-2"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full md:w-1/2 flex justify-start self-start">
+        <div data-agent="3" class="agent-card glass p-6 w-full max-w-md flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center gap-4 mb-4">
+              <div class="avatar bg-emerald-500/20 border border-emerald-500/30">📍</div>
+              <div>
+                <div class="text-[10px] font-mono opacity-50 tracking-widest font-bold">AGENT_03</div>
+                <h3 class="font-black text-base" id="lbl-a3-title">Area Scanner</h3>
+              </div>
+            </div>
+            <p class="text-xs opacity-75 leading-relaxed mb-6" id="lbl-a3-desc">Spatial clustering (500m radius) to suppress spam.</p>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
+            <div class="pulse-bar"><div class="progress" id="p-3"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full md:w-1/2 flex justify-end self-end">
+        <div data-agent="4" class="agent-card glass p-6 w-full max-w-md flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center gap-4 mb-4">
+              <div class="avatar bg-amber-500/20 border border-amber-500/30">🔗</div>
+              <div>
+                <div class="text-[10px] font-mono opacity-50 tracking-widest font-bold">AGENT_04</div>
+                <h3 class="font-black text-base" id="lbl-a4-title">Dept Linker</h3>
+              </div>
+            </div>
+            <p class="text-xs opacity-75 leading-relaxed mb-6" id="lbl-a4-desc">Routes payloads to specific municipal portals.</p>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
+            <div class="pulse-bar"><div class="progress" id="p-4"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full md:w-1/2 flex justify-start self-start">
+        <div data-agent="5" class="agent-card glass p-6 w-full max-w-md flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center gap-4 mb-4">
+              <div class="avatar bg-pink-500/20 border border-pink-500/30">💎</div>
+              <div>
+                <div class="text-[10px] font-mono opacity-50 tracking-widest font-bold">AGENT_05</div>
+                <h3 class="font-black text-base" id="lbl-a5-title">Credit Allocator</h3>
+              </div>
+            </div>
+            <p class="text-xs opacity-75 leading-relaxed mb-6" id="lbl-a5-desc">Calculates and distributes gamified citizen tokens.</p>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
+            <div class="pulse-bar"><div class="progress" id="p-5"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full md:w-1/2 flex justify-end self-end">
+        <div data-agent="6" class="agent-card glass p-6 w-full max-w-md flex flex-col justify-between shadow-xl">
+          <div>
+            <div class="flex items-center gap-4 mb-4">
+              <div class="avatar bg-red-500/20 border border-red-500/30">⏱️</div>
+              <div>
+                <div class="text-[10px] font-mono opacity-50 tracking-widest font-bold">AGENT_06</div>
+                <h3 class="font-black text-base" id="lbl-a6-title">SLA Sentinel</h3>
+              </div>
+            </div>
+            <p class="text-xs opacity-75 leading-relaxed mb-6" id="lbl-a6-desc">Tracks 72h SLAs and initiates escalation pings.</p>
+          </div>
+          <div>
+            <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
+            <div class="pulse-bar"><div class="progress" id="p-6"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const locales = {
+      en: {
+        switchEra: "Design Generation:",
+        mainTitle: "Live Pipeline Monitor",
+        subTitle: "Awaiting production report telemetry signals...",
+        statusIdle: "STATUS: STANDBY",
+        statusActive: "STATUS: COMPUTING DATA...",
+        statusDone: "STATUS: VERIFIED // PASSED",
+        a1Title: "Linguistic Parser", a1Desc: "Processes multi-lingual audio/slang into structured JSON.",
+        a2Title: "Vision Validator", a2Desc: "Pixel-level inspection to verify infrastructure damage.",
+        a3Title: "Area Scanner", a3Desc: "Spatial clustering (500m radius) to suppress spam.",
+        a4Title: "Dept Linker", a4Desc: "Routes payloads to specific municipal portals.",
+        a5Title: "Credit Allocator", a5Desc: "Calculates and distributes gamified citizen tokens.",
+        a6Title: "SLA Sentinel", a6Desc: "Tracks 72h SLAs and initiates escalation pings."
+      },
+      hi: {
+        switchEra: "डिज़ाइन जनरेशन:",
+        mainTitle: "लाइव पाइपलाइन मॉनिटर",
+        subTitle: "उत्पादन रिपोर्ट टेलीमेट्री संकेतों की प्रतीक्षा की जा रही है...",
+        statusIdle: "स्थिति: स्टैंडबाय",
+        statusActive: "स्थिति: प्रोसेसिंग जारी है...",
+        statusDone: "स्थिति: डेटा ट्रांसफर सफल",
+        a1Title: "भाषाई विश्लेषक", a1Desc: "बहुभाषी वॉयस रिकॉर्डिंग और स्थानीय भाषा / स्लैंग को अत्यधिक संरचित JSON में बदलता है।",
+        a2Title: "विज़न वैलिडेटर", a2Desc: "पिक्सेल-स्तरीय निरीक्षण द्वारा इंफ्रास्ट्रक्चर के नुकसान की पुष्टि करता है।",
+        a3Title: "एरिया स्कैनर", a3Desc: "स्पैम को रोकने के लिए 500 मीटर के दायरे में स्थानिक क्लस्टरिंग की जांच करता है।",
+        a4Title: "विभाग लिंक नोड", a4Desc: "तैयार की गई समस्या की फ़ाइलों को विशिष्ट नगर निगम पोर्टलों पर रूट करता है।",
+        a5Title: "क्रेडिट एलोकेटर", a5Desc: "नागरिकों के लिए गेमिफाइड टोकन पुरस्कारों की गणना और वितरण करता है।",
+        a6Title: "SLA सेंटिनल", a6Desc: "72 घंटे के SLA टाइमलाइन की निगरानी करता है और नोड एस्केलेशन ट्रिगर करता है।"
+      }
+    };
+
+    let currentLanguage = 'en';
+
+    function setEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+      requestAnimationFrame(drawStaticBackgroundPaths);
+    }
+
+    function updatePageLanguage(lang) {
+      currentLanguage = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+      const dict = locales[lang];
+
+      document.getElementById("lbl-switch-era").textContent = dict.switchEra;
+      document.getElementById("txt-title").textContent = dict.mainTitle;
+      document.getElementById("lbl-subtitle").textContent = dict.subTitle;
+      
+      for(let i=1; i<=6; i++) {
+        const card = document.querySelector(`[data-agent="${i}"]`);
+        card.querySelector('h3').textContent = dict[`a${i}Title`];
+        card.querySelector('p').textContent = dict[`a${i}Desc`];
+        
+        const txt = card.querySelector('.status-text');
+        if (!card.classList.contains('active') && document.getElementById(`p-${i}`).style.width !== '100%') {
+          txt.textContent = dict.statusIdle;
+        } else if (card.classList.contains('active')) {
+          txt.textContent = dict.statusActive;
+        } else if (document.getElementById(`p-${i}`).style.width === '100%') {
+          txt.textContent = dict.statusDone;
+        }
+      }
+    }
+
+    /* ==========================================================================
+       ADAPTED STATE CONTROLLER PIPELINE ENGINE WITH BACKEND TELEMETRY FETCH
+       ========================================================================== */
+    async function triggerAgent(agentId) {
+      const card = document.querySelector(`[data-agent="${agentId}"]`);
+      if (!card) return;
+      
+      const progressBar = document.getElementById(`p-${agentId}`);
+      const statusText = card.querySelector('.status-text');
+      const dict = locales[currentLanguage];
+      
+      // Phase 1: Set Active / Processing States
+      card.classList.add('active');
+      card.classList.add('border-accent');
+      progressBar.style.animationPlayState = 'running';
+      progressBar.style.width = "40%"; 
+      
+      if (statusText) {
+        statusText.textContent = dict.statusActive;
+        statusText.className = "text-[10px] font-mono text-cyan-400 font-bold status-text";
+      }
+      
+      // Soften neighboring modules for visualization focus
+      document.querySelectorAll('.agent-card').forEach(c => {
+        if (c !== card) c.style.opacity = "0.2";
+      });
+
+      // Illuminate the incoming tracing channel vector
+      const internalId = parseInt(agentId);
+      if (internalId > 1) {
+        const fillPath = document.getElementById(`fill-path-${internalId - 1}`);
+        if (fillPath) fillPath.style.strokeDashoffset = "0";
+      }
+
+      // Phase 2: Execute Live Production Telemetry Request
+      try {
+        const response = await fetch('http://localhost:3000/api/generate-slogan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ problemContext: `Node Trigger Agent ${agentId}`, tone: "formal" })
+        });
+        const data = await response.json();
+        console.log(`Telemetry Data (Agent ${agentId}):`, data.telemetry);
+      } catch (e) {
+        console.error(`Backend offline or unreachable for Agent ${agentId}`);
+      }
+
+      // Phase 3: Complete and Settle Agent State Pipeline
+      card.classList.remove('active');
+      card.classList.remove('border-accent');
+      progressBar.style.animationPlayState = 'paused';
+      progressBar.style.width = "100__container"; // fallback safety
+      progressBar.style.width = "100%";
+      card.style.opacity = "0.7";
+      
+      if (statusText) {
+        statusText.textContent = dict.statusDone;
+        statusText.className = "text-[10px] font-mono text-emerald-400 font-bold status-text";
+      }
+      
+      // Light up next directional trace vector link
+      if (internalId <= 5) {
+        const fillPath = document.getElementById(`fill-path-${internalId}`);
+        if (fillPath) fillPath.style.strokeDashoffset = "0";
+      }
+
+      // Restore neighboring items' ambient values
+      document.querySelectorAll('.agent-card').forEach(c => {
+        if (!c.classList.contains('active') && c.querySelector('.progress').style.width !== '100%') {
+          c.style.opacity = "0.4";
+        }
+      });
+    }
+
+    /* ==========================================================================
+       SVG BLUEPRINT SMOOTH CURVE CONNECTOR GENERATION
+       ========================================================================== */
+    function drawStaticBackgroundPaths() {
+      const canvas = document.getElementById("matrix-canvas");
+      canvas.setAttribute("height", document.body.scrollHeight);
+
+      for (let i = 1; i <= 5; i++) {
+        const startElem = document.querySelector(`[data-agent="${i}"]`);
+        const endElem = document.querySelector(`[data-agent="${i+1}"]`);
+        const bgPath = document.getElementById(`bg-path-${i}`);
+        const fillPath = document.getElementById(`fill-path-${i}`);
+
+        if (!startElem || !endElem || !fillPath) continue;
+
+        const startRect = startElem.getBoundingClientRect();
+        const endRect = endElem.getBoundingClientRect();
+
+        const startX = startRect.left + startRect.width / 2 + window.scrollX;
+        const startY = startRect.top + startRect.height / 2 + window.scrollY;
+        const endX = endRect.left + endRect.width / 2 + window.scrollX;
+        const endY = endRect.top + endRect.height / 2 + window.scrollY;
+
+        // Cinematic cubic curve interpolation calculations
+        const controlY = startY + (endY - startY) * 0.5;
+        const dAttr = `M ${startX} ${startY} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${endY}`;
+
+        if (bgPath) bgPath.setAttribute("d", dAttr);
+        fillPath.setAttribute("d", dAttr);
+        
+        const totalLength = bgPath ? bgPath.getTotalLength() : 1000;
+        fillPath.style.strokeDasharray = totalLength;
+        if (!fillPath.dataset.initialized) {
+          fillPath.style.strokeDashoffset = totalLength;
+          fillPath.dataset.initialized = "true";
+        }
+      }
+    }
+
+    function clearAllMonitorNodes() {
+      const dict = locales[currentLanguage];
+      for (let i = 1; i <= 6; i++) {
+        const card = document.querySelector(`[data-agent="${i}"]`);
+        const progressBar = document.getElementById(`p-${i}`);
+        const statusText = card.querySelector('.status-text');
+        
+        card.classList.remove('active', 'border-accent');
+        progressBar.style.animationPlayState = 'paused';
+        progressBar.style.width = "0%";
+        card.style.opacity = "0.4";
+        
+        if (statusText) {
+          statusText.textContent = dict.statusIdle;
+          statusText.className = "text-[10px] font-mono opacity-60 status-text";
+        }
+      }
+      for (let p = 1; p <= 5; p++) {
+        const path = document.getElementById(`fill-path-${p}`);
+        if (path) path.style.strokeDashoffset = path.style.strokeDasharray;
+      }
+    }
+
+    window.addEventListener("resize", drawStaticBackgroundPaths);
+    window.onload = function() {
+      setEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
+      updatePageLanguage(localStorage.getItem('streetvoice_lang') || 'en');
+      setTimeout(drawStaticBackgroundPaths, 400);
+    };
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>

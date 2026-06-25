@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — The Architect</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ==========================================================================
+       THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+      --badge-bg: #111111;
+      --badge-text: #ffffff;
+      --svg-line: #222222;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #eab308; 
+      --radius: 24px; 
+      --font: 'Courier New', monospace;
+      --brand-color: #eab308;
+      --badge-bg: rgba(234, 179, 8, 0.15);
+      --badge-text: #eab308;
+      --svg-line: #eab308;
+    }
+    [data-theme="modern"] { 
+      --bg: #0f172a; 
+      --surface: #1e293b; 
+      --text: #f8fafc; 
+      --accent: #38bdf8; 
+      --border: #334155; 
+      --radius: 20px; 
+      --font: system-ui, -apple-system, sans-serif;
+      --brand-color: #ffb59d;
+      --badge-bg: rgba(56, 189, 248, 0.1);
+      --badge-text: #38bdf8;
+      --svg-line: #38bdf8;
+    }
+    
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font); 
+      transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease; 
+      overflow-x: hidden;
+    }
+    .glass { 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius); 
+      backdrop-filter: blur(16px);
+      transition: background 0.4s ease, border-color 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      opacity: 0.4;
+      transform: scale(0.96);
+    }
+    
+    /* Reveal card when scrolled into view */
+    .glass.revealed {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .brand-text { color: var(--brand-color); }
+    
+    .custom-badge {
+      background: var(--badge-bg);
+      border: 1px solid var(--accent);
+      color: var(--badge-text);
+      /* Provide a proper fallback for --radius and compute half-size */
+      border-radius: calc((var(--radius, 8px)) / 1.5);
+    }
+
+    /* SCROLL ANIMATED VECTOR CANVAS */
+    .scroll-svg-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .scroll-path {
+      stroke: var(--svg-line);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      opacity: 0.1;
+    }
+    .scroll-path-fill {
+      stroke: var(--svg-line);
+      stroke-width: 3;
+      fill: none;
+      stroke-linecap: round;
+      filter: drop-shadow(0px 0px 6px var(--accent));
+      transition: stroke-dashoffset 0.1s ease-out;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-12 relative min-h-[150vh]">
+
+  <svg class="scroll-svg-canvas" id="architect-canvas">
+    <path id="bg-trace" class="scroll-path" />
+    <path id="scroll-fill" class="scroll-path-fill" />
+  </svg>
+
+  <header class="w-full max-w-4xl mx-auto mb-16 flex flex-wrap justify-between items-center gap-4 relative z-10">
+    <a href="index.html" class="brand-text text-xl font-black flex items-center gap-2">
+      <span>← StreetVoice</span>
+    </a>
+    
+    <div class="flex flex-wrap gap-3">
+      <div class="glass revealed px-4 py-2 flex items-center gap-2 text-xs font-bold shadow-md">
+        <span class="opacity-75">Design Generation:</span>
+        <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
+        <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
+        <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full max-w-4xl mx-auto space-y-32 pb-32 relative z-10">
+    
+    <section id="node-1" class="glass p-8 md:p-10 shadow-2xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <h2 class="text-3xl md:text-4xl font-black tracking-tight">The Architect</h2>
+        <span class="text-xs font-mono font-bold tracking-widest px-3 py-1 bg-white/5 border border-white/10 rounded-full w-max">ROLE // SEC_ENG</span>
+      </div>
+      <p class="opacity-80 leading-relaxed text-sm md:text-base">
+        I am a 19-year-old Cybersecurity student obsessed with the mechanics of how systems break—and how to harden them. 
+        StreetVoice was engineered for <strong>Vibe2Ship Hackathon 2026</strong> to move beyond theory and build a 
+        deterministic, autonomous system that solves real-world civic friction. My focus is on systemic observability: 
+        transforming complaints from "lost tickets" into actionable telemetry.
+      </p>
+    </section>
+
+    <section id="node-2" class="glass p-8 md:p-10 shadow-xl max-w-2xl">
+      <h3 class="font-bold text-[var(--accent)] mb-4 uppercase tracking-wider text-xs font-mono">
+        // Core Design Values
+      </h3>
+      <ul class="text-sm md:text-base space-y-4 opacity-90 font-medium">
+        <li class="flex items-center gap-3">🛡️ <span>Radical Transparency</span></li>
+        <li class="flex items-center gap-3">✊ <span>Civic Agency</span></li>
+        <li class="flex items-center gap-3">⚖️ <span>Systemic Accountability</span></li>
+      </ul>
+    </section>
+      
+    <section id="node-3" class="glass p-8 md:p-10 shadow-xl max-w-2xl ml-auto">
+      <h3 class="font-bold text-[var(--accent)] mb-4 uppercase tracking-wider text-xs font-mono">
+        // Value Proposition
+      </h3>
+      <p class="text-sm md:text-base opacity-80 leading-relaxed">
+        Replacing human middle-management with an autonomous LLM orchestration layer to ensure objective, rapid response.
+      </p>
+    </section>
+
+    <footer id="node-4" class="text-center pt-8">
+      <div class="inline-block px-6 py-3 custom-badge font-mono text-xs tracking-widest uppercase font-bold shadow-md">
+        BUILT FOR VIBE2SHIP HACKATHON 2026
+      </div>
+    </footer>
+
+  </main>
+
+  <script>
+    function setEra(eraName) {
+      document.documentElement.setAttribute('data-theme', eraName);
+      localStorage.setItem('streetvoice_era_theme', eraName);
+      requestAnimationFrame(buildVectorBlueprintPath);
+    }
+
+    /* ==========================================================================
+       DYNAMIC SCROLL-RESPONSIVE BLUEPRINT SVG STRUCTOR
+       ========================================================================== */
+    function buildVectorBlueprintPath() {
+      const canvas = document.getElementById("architect-canvas");
+      const bgTrace = document.getElementById("bg-trace");
+      const scrollFill = document.getElementById("scroll-fill");
+      
+      const n1 = document.getElementById("node-1");
+      const n2 = document.getElementById("node-2");
+      const n3 = document.getElementById("node-3");
+      const n4 = document.getElementById("node-4");
+
+      if (!n1 || !n2 || !n3 || !n4) return;
+
+      canvas.setAttribute("height", document.body.scrollHeight);
+
+      // Get accurate coordinate milestones for anchor centers
+      const getCenterCoords = (el) => {
+        const r = el.getBoundingClientRect();
+        return {
+          x: r.left + r.width / 2 + window.scrollX,
+          y: r.top + r.height / 2 + window.scrollY
+        };
+      };
+
+      const p1 = getCenterCoords(n1);
+      const p2 = getCenterCoords(n2);
+      const p3 = getCenterCoords(n3);
+      const p4 = getCenterCoords(n4);
+
+      // Render architectural cubic trace threading layout nodes
+      const dPath = `
+        M ${p1.x} ${p1.y}
+        C ${p1.x} ${(p1.y + p2.y)/2}, ${p2.x} ${(p1.y + p2.y)/2}, ${p2.x} ${p2.y}
+        C ${p2.x} ${(p2.y + p3.y)/2}, ${p3.x} ${(p2.y + p3.y)/2}, ${p3.x} ${p3.y}
+        C ${p3.x} ${(p3.y + p4.y)/2}, ${p4.x} ${(p3.y + p4.y)/2}, ${p4.x} ${p4.y}
+      `;
+
+      bgTrace.setAttribute("d", dPath);
+      scrollFill.setAttribute("d", dPath);
+
+      // Initialize length systems
+      const totalLength = bgTrace.getTotalLength();
+      scrollFill.style.strokeDasharray = totalLength;
+      
+      // Update tracking calculation on call
+      updateScrollProgress(totalLength);
+    }
+
+    function updateScrollProgress(totalLength) {
+      const scrollFill = document.getElementById("scroll-fill");
+      if (!scrollFill) return;
+
+      const scrollTop = window.scrollY;
+      const docHeight = document.body.scrollHeight - window.innerHeight;
+      
+      // Calculate strict scroll percentages safely
+      const scrollPercent = Math.min(Math.max(scrollTop / docHeight, 0), 1);
+      
+      // Drive path offset downwards based on viewport movement
+      scrollFill.style.strokeDashoffset = totalLength - (scrollPercent * totalLength);
+    }
+
+    /* ==========================================================================
+       INTERSECTION OBSERVER FOR CINEMATIC CARD FOCUS REVEALS
+       ========================================================================== */
+    const cardRevealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+        }
+      });
+    }, {
+      threshold: 0.2,
+      rootMargin: "0px 0px -50px 0px"
+    });
+
+    window.addEventListener("scroll", () => {
+      const scrollFill = document.getElementById("scroll-fill");
+      if (scrollFill && scrollFill.style.strokeDasharray) {
+        updateScrollProgress(parseFloat(scrollFill.style.strokeDasharray));
+      }
+    });
+
+    window.addEventListener("resize", buildVectorBlueprintPath);
+
+    window.onload = function() {
+      setEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
+      
+      // Connect structural observe layers
+      document.querySelectorAll('.glass').forEach(card => cardRevealObserver.observe(card));
+      
+      setTimeout(buildVectorBlueprintPath, 500);
+    };
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>

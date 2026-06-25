@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreetVoice — Ticket Pipeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    /* ==========================================================================
+       THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
+       ========================================================================== */
+    [data-theme="90s"] { 
+      --bg: #fcfbf7; 
+      --surface: #ffffff; 
+      --text: #111111; 
+      --accent: #111111; 
+      --border: #222222; 
+      --radius: 0px; 
+      --font: serif;
+      --brand-color: #111111;
+      --btn-text: #ffffff;
+    }
+    [data-theme="y2k"] { 
+      --bg: #0b0117; 
+      --surface: rgba(24, 3, 48, 0.85); 
+      --text: #fef08a; 
+      --accent: #eab308; 
+      --border: #eab308; 
+      --radius: 24px; 
+      --font: 'Courier New', monospace;
+      --brand-color: #eab308;
+      --btn-text: #1e003b;
+    }
+    [data-theme="modern"] { 
+      --bg: #0f0e11; 
+      --surface: rgba(25, 22, 28, 0.7); 
+      --text: #fff7f2; 
+      --accent: #ff6b35; 
+      --border: rgba(255, 181, 157, 0.15); 
+      --radius: 16px; 
+      --font: system-ui, sans-serif;
+      --brand-color: #ffb59d;
+      --btn-text: #390c00;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: var(--font); transition: all 0.4s ease; }
+    .glass { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); backdrop-filter: blur(16px); }
+    .accent { background: var(--accent); color: var(--btn-text); border-radius: var(--radius); font-weight: 800; }
+    .accent:disabled { opacity: 0.4; cursor: not-allowed; }
+    .brand-text { color: var(--brand-color); }
+    .nav-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px; }
+    .nav-btn:hover { background: var(--accent); color: var(--btn-text); }
+    .tooltip-box { background: var(--bg); color: var(--text); border: 1px solid var(--border); font-size: 10px; }
+  </style>
+</head>
+<body class="p-4 md:p-6 min-h-screen flex flex-col justify-between">
+
+  <header class="w-full max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <a href="dashboard.html" class="nav-btn px-3 py-1.5 text-xs font-bold transition">← Return Dashboard</a>
+      <h1 class="text-xl font-black uppercase tracking-tight brand-text" id="txt-headline">Ticket Pipeline</h1>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div class="glass px-3 py-1.5 flex items-center gap-2 shadow-sm">
+        
+        <div class="relative group">
+          <a href="riskmap.html" class="nav-btn w-9 h-9 flex items-center justify-center transition-all text-sm">🗺️</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box font-bold px-2 py-1 rounded shadow-md pointer-events-none">
+            Live RiskMap Diagnostics
+          </div>
+        </div>
+
+        <div class="relative group">
+          <a href="agents.html" class="nav-btn w-9 h-9 flex items-center justify-center transition-all text-sm">🤖</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box font-bold px-2 py-1 rounded shadow-md pointer-events-none">
+            Agent Orchestration Monitor
+          </div>
+        </div>
+
+      </div>
+
+      <div class="glass px-3 py-1 text-xs font-bold flex gap-1">
+        <button onclick="changePageLanguage('en')" class="hover:underline p-1">EN</button>
+        <span class="opacity-40 p-1">|</span>
+        <button onclick="changePageLanguage('hi')" class="hover:underline p-1">हिं</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="w-full max-w-4xl mx-auto grid md:grid-cols-2 gap-6 items-start flex-1">
+    
+    <div class="glass p-5 space-y-4">
+      <h2 class="text-xs font-black uppercase tracking-widest border-b border-current pb-2 opacity-70" id="lbl-manifest">Incident Manifest Entry</h2>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-title">Incident Header Title</label>
+          <input type="text" id="report-title" placeholder="e.g. Waterlogged Junction Grid Alpha" class="w-full bg-black/20 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-400 font-mono">
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-category">Classification Node</label>
+          <select id="report-category" class="w-full bg-neutral-900 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none text-current font-mono">
+            <option value="cat-1">Roadways & Potholes</option>
+            <option value="cat-2">Electrical & Streetlights</option>
+            <option value="cat-3">Sanitation & Drainage Emergency</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-location">Geographic Node Location</label>
+          <input type="text" id="report-location" placeholder="e.g. Linking Road, Bandra West" class="w-full bg-black/20 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-400 font-mono">
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-desc">Granular System Log Context</label>
+          <textarea id="report-desc" rows="3" placeholder="Describe the structural asset failure..." class="w-full bg-black/20 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-400 font-mono"></textarea>
+        </div>
+        <button onclick="dispatchPipelineTicket()" class="w-full accent py-3 text-xs uppercase tracking-wider font-black shadow-md block transition" id="btn-dispatch">
+          Compile & Dispatch Ticket
+        </button>
+      </div>
+    </div>
+
+    <div class="space-y-4 h-full flex flex-col">
+      <div class="glass p-4 font-mono text-xs flex-1 flex flex-col justify-between min-h-[220px]">
+        <div>
+          <span class="text-[10px] uppercase font-bold opacity-50 block mb-2" id="lbl-logs">System Execution Logs</span>
+          <div id="terminal-logs" class="space-y-1 h-32 overflow-y-auto pr-2 scrollbar-none">
+            <div class="text-neutral-500">&gt; Node telemetry clear. Ready for entry sequence...</div>
+          </div>
+        </div>
+
+        <div id="email-draft-container" class="mt-4 pt-4 border-t border-dashed border-current/20 hidden">
+          <span class="text-[10px] uppercase text-amber-500 font-bold block mb-1" id="lbl-draft">Assembled Official Dispatch Protocol</span>
+          <pre id="email-preview" class="p-2 bg-black/40 border border-current/10 rounded text-[11px] overflow-x-auto whitespace-pre-wrap max-h-32 mb-2 text-neutral-300"></pre>
+          <a id="send-btn" href="#" class="inline-block px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded text-[10px] uppercase tracking-wider transition">
+            Launch Native Mail Client Gateway
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="w-full text-center text-[10px] opacity-40 py-4 font-mono">
+    STREETVOICE ENGINE SECURE DATA INTAKE PIPELINE // CONTEXT-METRIC-LOCK
+  </footer>
+
+  <script>
+    const locales = {
+      en: {
+        headline: "Ticket Pipeline Portal", manifest: "Incident Manifest Entry",
+        title: "Incident Header Title", category: "Classification Node",
+        location: "Geographic Node Location", desc: "Granular System Log Context",
+        btnDispatch: "Compile & Dispatch Ticket", logs: "System Execution Logs",
+        draft: "Assembled Official Dispatch Protocol", btnProcessing: "Syncing Buffer...",
+        logProcessing: "Packaging structural context packet", logSuccess: "Ticket compilation complete. Cryptographic mail payload staged below.",
+        emailRecipient: "wardofficer@mumbai.gov.in", emailSubject: "CIVIC INCIDENT ESCALATION NODAL LOG:",
+        emailGreeting: "Respected Authority,", emailBody: "This automated entry serves to officially escalate a reported critical civic asset infrastructure anomaly logged via the StreetVoice decentralized node monitoring architecture",
+        emailFooter: "Please dispatch verification operators to investigate this node immediately.\n\nGenerated Securely via StreetVoice User Node Interface Cluster."
+      },
+      hi: {
+        headline: "टिकट पाइपलाइन पोर्टल", manifest: "शिकायत विवरण प्रविष्टी",
+        title: "शिकायत का मुख्य शीर्षक", category: "समस्या का वर्गीकरण नोड",
+        location: "भौगोलिक नोड स्थान (पता)", desc: "समस्या का विस्तृत विवरण लॉग",
+        btnDispatch: "टिकट संकलित और प्रेषित करें", logs: "सिस्टम निष्पादन लॉग",
+        draft: "आधिकारिक प्रेषण प्रोटोकॉल ड्राफ्ट", btnProcessing: "बफर सिंक हो रहा है...",
+        logProcessing: "ढांचागत संदर्भ पैकेट संकलित हो रहा है", logSuccess: "टिकट संकलन पूरा हुआ। ईमेल पेलोड नीचे तैयार है।",
+        emailRecipient: "wardofficer@mumbai.gov.in", emailSubject: "नागरिक समस्या समाधान लॉग संख्या:",
+        emailGreeting: "आदरणीय अधिकारी महोदय,", emailBody: "यह स्वचालित प्रविष्टि स्ट्रीटवॉइस विकेंद्रीकृत नोड निगरानी आर्किटेक्चर के माध्यम से दर्ज की गई एक गंभीर बुनियादी ढांचे की समस्या को आधिकारिक रूप से अग्रेषित करने के लिए है",
+        emailFooter: "कृपया इस नोड की तुरंत जांच के लिए सत्यापन ऑपरेटरों को भेजें।\n\nस्ट्रीटवॉइस यूजर नोड इंटरफेस क्लस्टर के माध्यम से सुरक्षित रूप से उत्पन्न।"
+      }
+    };
+
+    let activeLang = 'en';
+    let currentUser = null;
+
+    function setEra(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    function changePageLanguage(lang) {
+      activeLang = lang;
+      localStorage.setItem('streetvoice_lang', lang);
+      const dict = locales[lang];
+
+      document.getElementById("txt-headline").textContent = dict.headline;
+      document.getElementById("lbl-manifest").textContent = dict.manifest;
+      document.getElementById("lbl-title").textContent = dict.title;
+      document.getElementById("lbl-category").textContent = dict.category;
+      document.getElementById("lbl-location").textContent = dict.location;
+      document.getElementById("lbl-desc").textContent = dict.desc;
+      document.getElementById("btn-dispatch").textContent = dict.btnDispatch;
+      document.getElementById("lbl-logs").textContent = dict.logs;
+      document.getElementById("lbl-draft").textContent = dict.draft;
+    }
+
+    function dispatchPipelineTicket() {
+      const dict = locales[activeLang];
+      const title = document.getElementById("report-title").value.trim();
+      const catText = document.getElementById("report-category").options[document.getElementById("report-category").selectedIndex].text;
+      const location = document.getElementById("report-location").value.trim();
+      const desc = document.getElementById("report-desc").value.trim();
+
+      if (!title || !location || !desc) {
+        alert(activeLang === 'hi' ? "कृपया सभी फ़ील्ड भरें।" : "Please populate all structural manifest fields.");
+        return;
+      }
+
+      const logs = document.getElementById("terminal-logs");
+      const btn = document.getElementById("btn-dispatch");
+
+      btn.disabled = true;
+      btn.textContent = dict.btnProcessing;
+      
+      logs.innerHTML += `<div class="text-sky-400">> ${dict.logProcessing} "${title}"...</div>`;
+      logs.scrollTop = logs.scrollHeight;
+
+      setTimeout(() => {
+        const ticketId = `SV-TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+        const generatedPayload = {
+          id: ticketId, category: catText, location: location, desc: desc,
+          sourceLang: `Manual Pipeline Entry (${activeLang.toUpperCase()})`, votes: 1, user: currentUser.id
+        };
+
+        currentUser.reports.unshift(generatedPayload);
+        currentUser.stats.reported += 1;
+        currentUser.streetCredits += 25;
+        localStorage.setItem(`streetvoice_user_${currentUser.id}`, JSON.stringify(currentUser));
+
+        // ===== FIREBASE: persist report + updated credits so leaderboard/feed are real across devices =====
+        if (window.db) {
+          db.ref('reports/' + ticketId).set({
+            ...generatedPayload,
+            timestamp: Date.now()
+          }).catch(err => console.error("Firebase report write failed:", err));
+
+          db.ref('users/' + currentUser.id).update({
+            name: currentUser.name,
+            city: currentUser.city,
+            streetCredits: currentUser.streetCredits,
+            stats: currentUser.stats
+          }).catch(err => console.error("Firebase user update failed:", err));
+        } else {
+          console.warn("Firebase not initialized — check firebase-config.js");
+        }
+
+        const recipient = dict.emailRecipient;
+        const subject = `${dict.emailSubject} [${ticketId}] — ${title.toUpperCase()}`;
+        const body = `${dict.emailGreeting}\n\n${dict.emailBody}:\n• Category: ${catText}\n• Location: ${location}\n• Description: "${desc}"\n\n${dict.emailFooter}`;
+
+        document.getElementById("email-preview").textContent = `TO: ${recipient}\nSUBJECT: ${subject}\n\n${body}`;
+        document.getElementById("send-btn").href = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        
+        document.getElementById("email-draft-container").classList.remove("hidden");
+        logs.innerHTML += `<div class="text-emerald-500 font-bold">> ${dict.logSuccess}</div>`;
+        logs.scrollTop = logs.scrollHeight;
+        
+        btn.disabled = false;
+        btn.textContent = dict.btnDispatch;
+      }, 1500);
+    }
+
+    window.onload = function() {
+      setEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
+      
+      const currentUserId = localStorage.getItem("streetvoice_current_user") || "SV-MUM-DEV-4000";
+      currentUser = JSON.parse(localStorage.getItem(`streetvoice_user_${currentUserId}`));
+      
+      changePageLanguage(localStorage.getItem('streetvoice_lang') || 'en');
+    }
+  </script>
+  <script src="cursor.js"></script>
+</body>
+</html>
