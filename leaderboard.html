@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="modern">
 <head>
+  <link rel="icon" type="image/png" href="/favicon.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreetVoice — Elite Standings</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
@@ -82,7 +87,31 @@
         "ZEN-MODERATOR": { city: "Agra", streetCredits: 300, avatar: "pfp2.png", isMock: true },
         "NIGHT-OWL-SEC": { city: "Nashik", streetCredits: 250, avatar: "pfp8.png", isMock: true }
       };
-      renderLeaderboardEngine(mockUsers);
+
+      if (!window.db) {
+        console.warn("Firebase not initialized — showing mock leaderboard only.");
+        renderLeaderboardEngine(mockUsers);
+        return;
+      }
+
+      // ===== REAL DATA: merge actual Firebase citizens in with the mock "flavor" users =====
+      db.ref('users').once('value').then((snapshot) => {
+        const realUsers = snapshot.val() || {};
+        const combined = { ...mockUsers };
+        Object.keys(realUsers).forEach(id => {
+          combined[id] = {
+            avatar: realUsers[id].avatar || "pfp1.png",
+            city: realUsers[id].city || "Unknown",
+            streetCredits: realUsers[id].streetCredits || 0,
+            ...realUsers[id],
+            isMock: false
+          };
+        });
+        renderLeaderboardEngine(combined);
+      }).catch((err) => {
+        console.error("Firebase leaderboard read failed, falling back to mock:", err);
+        renderLeaderboardEngine(mockUsers);
+      });
     }
 
     function renderLeaderboardEngine(data) {
