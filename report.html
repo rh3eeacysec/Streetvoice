@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="modern">
 <head>
+  <link rel="icon" type="image/png" href="/favicon.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreetVoice — Ticket Pipeline</title>
@@ -100,18 +102,34 @@
         <div>
           <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-title">Incident Header Title</label>
           <input type="text" id="report-title" placeholder="e.g. Waterlogged Junction Grid Alpha" class="w-full bg-black/20 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-400 font-mono">
+          <p id="title-ai-status" class="text-[10px] mt-1 opacity-60 font-mono"></p>
         </div>
         <div>
           <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-category">Classification Node</label>
-          <select id="report-category" class="w-full bg-neutral-900 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none text-current font-mono">
-            <option value="cat-1">Roadways & Potholes</option>
-            <option value="cat-2">Electrical & Streetlights</option>
-            <option value="cat-3">Sanitation & Drainage Emergency</option>
+          <select id="report-category" onchange="handleCategoryChange()" class="w-full bg-neutral-900 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none text-current font-mono">
+            <option value="" selected disabled>— Select a civic issue category —</option>
+            <option value="cat-1">Pothole</option>
+            <option value="cat-2">Road Damage</option>
+            <option value="cat-3">Broken Streetlight</option>
+            <option value="cat-4">Garbage Overflow</option>
+            <option value="cat-5">Water Leakage</option>
+            <option value="cat-6">Blocked Drain</option>
+            <option value="cat-7">Damaged Footpath</option>
+            <option value="cat-8">Open Manhole</option>
+            <option value="cat-9">Traffic Signal Issue</option>
+            <option value="cat-10">Public Safety Hazard</option>
+            <option value="cat-11">Illegal Dumping</option>
+            <option value="cat-12">Public Toilet Issue</option>
+            <option value="cat-13">Park Maintenance Issue</option>
           </select>
         </div>
         <div>
           <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-location">Geographic Node Location</label>
-          <input type="text" id="report-location" placeholder="e.g. Linking Road, Bandra West" class="w-full bg-black/20 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-400 font-mono">
+          <div class="flex gap-2">
+            <input type="text" id="report-location" placeholder="e.g. Linking Road, Bandra West" class="flex-1 bg-black/20 border border-current/20 rounded px-3 py-2 text-sm focus:outline-none focus:border-orange-400 font-mono">
+            <button type="button" onclick="captureRealLocation()" id="btn-geolocate" class="px-3 rounded border border-current/20 bg-black/20 text-xs font-bold whitespace-nowrap hover:bg-black/40 transition">📍 Use My Location</button>
+          </div>
+          <p id="geo-status" class="text-[10px] mt-1 opacity-60 font-mono"></p>
         </div>
         <div>
           <label class="text-[10px] uppercase font-bold tracking-wider block mb-1" id="lbl-desc">Granular System Log Context</label>
@@ -173,11 +191,92 @@
       }
     };
 
+    /* ==========================================================================
+       GEMINI — AUTO-GENERATE INCIDENT TITLE ON CATEGORY SELECT
+       ========================================================================== */
+    const TITLE_API_URL = 'http://localhost:3000/api/generate-title';
+
+    async function handleCategoryChange() {
+      const categorySelect = document.getElementById("report-category");
+      const catText = categorySelect.options[categorySelect.selectedIndex].text;
+      const description = document.getElementById("report-desc").value.trim();
+      const location = document.getElementById("report-location").value.trim();
+      const titleInput = document.getElementById("report-title");
+      const statusEl = document.getElementById("title-ai-status");
+
+      statusEl.textContent = "⚡ Gemini is drafting a title...";
+
+      try {
+        const response = await fetch(TITLE_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: catText, description, location })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded ${response.status}`);
+        }
+
+        const data = await response.json();
+        titleInput.value = data.title;
+        statusEl.textContent = "✅ Title drafted by Gemini — feel free to edit it.";
+
+      } catch (err) {
+        console.error("Title generation failed:", err);
+        statusEl.textContent = `⚠️ Could not reach Gemini (is server.js running?). Type a title manually.`;
+      }
+    }
     let activeLang = 'en';
     let currentUser = null;
+    let capturedLat = null;
+    let capturedLng = null;
 
     function setEra(theme) {
       document.documentElement.setAttribute('data-theme', theme);
+    }
+
+    /* ==========================================================================
+       REAL GEOLOCATION — captures actual GPS coords + reverse-geocodes to an address
+       Stored as lat/lng on the report so riskmap.html plots the real pin location.
+       ========================================================================== */
+    function captureRealLocation() {
+      const statusEl = document.getElementById("geo-status");
+      const btn = document.getElementById("btn-geolocate");
+
+      if (!navigator.geolocation) {
+        statusEl.textContent = "⚠️ Geolocation not supported on this browser.";
+        return;
+      }
+
+      btn.disabled = true;
+      statusEl.textContent = "📡 Requesting GPS lock...";
+
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        capturedLat = position.coords.latitude;
+        capturedLng = position.coords.longitude;
+        statusEl.textContent = `✅ Locked: ${capturedLat.toFixed(5)}, ${capturedLng.toFixed(5)} — resolving address...`;
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${capturedLat}&lon=${capturedLng}&zoom=16`, {
+            headers: { "Accept-Language": activeLang === 'hi' ? 'hi' : 'en' }
+          });
+          const data = await res.json();
+          const address = data.display_name || `${capturedLat.toFixed(5)}, ${capturedLng.toFixed(5)}`;
+          document.getElementById("report-location").value = address;
+          statusEl.textContent = `✅ Location set from GPS.`;
+        } catch (err) {
+          console.error("Reverse geocoding failed:", err);
+          document.getElementById("report-location").value = `${capturedLat.toFixed(5)}, ${capturedLng.toFixed(5)}`;
+          statusEl.textContent = `✅ GPS coordinates captured (address lookup failed, raw coords used).`;
+        } finally {
+          btn.disabled = false;
+        }
+      }, (err) => {
+        console.error("Geolocation failed:", err);
+        statusEl.textContent = "⚠️ Could not get your location — check browser permissions, or type the address manually.";
+        btn.disabled = false;
+      }, { enableHighAccuracy: true, timeout: 10000 });
     }
 
     function changePageLanguage(lang) {
@@ -221,6 +320,7 @@
         const ticketId = `SV-TKT-${Math.floor(1000 + Math.random() * 9000)}`;
         const generatedPayload = {
           id: ticketId, category: catText, location: location, desc: desc,
+          lat: capturedLat, lng: capturedLng,
           sourceLang: `Manual Pipeline Entry (${activeLang.toUpperCase()})`, votes: 1, user: currentUser.id
         };
 
@@ -266,11 +366,21 @@
       setEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
       
       const currentUserId = localStorage.getItem("streetvoice_current_user") || "SV-MUM-DEV-4000";
-      currentUser = JSON.parse(localStorage.getItem(`streetvoice_user_${currentUserId}`));
+      localStorage.setItem("streetvoice_current_user", currentUserId);
+
+      const existing = localStorage.getItem(`streetvoice_user_${currentUserId}`);
+      currentUser = existing ? JSON.parse(existing) : {
+        id: currentUserId,
+        name: currentUserId,
+        city: "Mumbai",
+        streetCredits: 0,
+        reports: [],
+        stats: { reported: 0, verified: 0 }
+      };
+      localStorage.setItem(`streetvoice_user_${currentUserId}`, JSON.stringify(currentUser));
       
       changePageLanguage(localStorage.getItem('streetvoice_lang') || 'en');
     }
   </script>
-  <script src="cursor.js"></script>
 </body>
 </html>
