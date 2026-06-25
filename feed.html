@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="modern">
 <head>
+  <link rel="icon" type="image/png" href="/favicon.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreetVoice — Validation Feed</title>
@@ -245,9 +247,7 @@
               <span class="px-2 py-0.5 border text-[10px] font-black uppercase tracking-wider rounded ${badgeColor}">
                 ${report.severity || 'LOW'} [${report.severityScore || '0'}/100]
               </span>
-              <span class="px-2 py-0.5 border text-[10px] font-mono text-amber-500 border-amber-500/30 rounded bg-amber-500/5 font-bold">
-                ${dict.mockNotice}
-              </span>
+              ${report.isMock ? `<span class="px-2 py-0.5 border text-[10px] font-mono text-amber-500 border-amber-500/30 rounded bg-amber-500/5 font-bold">${dict.mockNotice}</span>` : ''}
               <span class="text-[10px] font-bold opacity-60 font-mono tracking-tight">Loc: ${report.location || 'MUMBAI'}</span>
               <span class="text-[10px] opacity-40 font-mono ml-auto md:ml-0">${new Date(report.timestamp).toLocaleTimeString()}</span>
             </div>
@@ -299,73 +299,73 @@
           category: "Structural Road Failure",
           desc: "Massive pothole cluster across the left-bound lane causing severe vehicle deceleration matrices and minor axel damage.",
           location: "BANDRA WEST", lat: 19.0544, lng: 72.8294, severity: "HIGH", severityScore: 82,
-          suggestedDepartment: "MCD-ROADS-DEPT", timestamp: Date.now() - 7200000, urgent: true, user: "SV-CITIZEN-77", votes: 14
+          suggestedDepartment: "MCD-ROADS-DEPT", timestamp: Date.now() - 7200000, urgent: true, user: "SV-CITIZEN-77", votes: 14, isMock: true
         },
         {
           category: "Electrical Substation Outage",
           desc: "Exposed industrial wire bundle hanging low over a water-logged pedestrian footpath. High electrocution risk vector.",
           location: "ANDHERI EAST", lat: 19.1176, lng: 72.8631, severity: "CRITICAL", severityScore: 96,
-          suggestedDepartment: "POWER-GRID-DISTRIBUTION", timestamp: Date.now() - 1800000, urgent: true, user: "SV-CITIZEN-102", votes: 45
+          suggestedDepartment: "POWER-GRID-DISTRIBUTION", timestamp: Date.now() - 1800000, urgent: true, user: "SV-CITIZEN-102", votes: 45, isMock: true
         },
         {
           category: "Sanitation & Waste Overflow",
           desc: "Commercial refuse container breached completely. Solid waste blocks storm runoff line, causing local alleyway flooding.",
           location: "DHARAVI NAKU", lat: 19.0380, lng: 72.8538, severity: "MEDIUM", severityScore: 54,
-          suggestedDepartment: "CIVIC-HYGIENE-MGMT", timestamp: Date.now() - 14400000, urgent: false, user: "SV-ANON-NODE", votes: 3
+          suggestedDepartment: "CIVIC-HYGIENE-MGMT", timestamp: Date.now() - 14400000, urgent: false, user: "SV-ANON-NODE", votes: 3, isMock: true
         },
         {
           category: "Open Drainage Breach",
           desc: "Manhole cast-iron lid displaced entirely near the main market entry intersection, causing acute safety hazards.",
           location: "COLABA CAUSEWAY", lat: 18.9218, lng: 72.8347, severity: "CRITICAL", severityScore: 91,
-          suggestedDepartment: "WASTEWATER-UTILITIES", timestamp: Date.now() - 600000, urgent: true, user: "SV-CITIZEN-09", votes: 28
+          suggestedDepartment: "WASTEWATER-UTILITIES", timestamp: Date.now() - 600000, urgent: true, user: "SV-CITIZEN-09", votes: 28, isMock: true
         },
         {
           category: "Public Utility Asset Damage",
           desc: "Broken public fresh-water pipeline fountain flooding main thoroughfare access alleyway since early morning.",
           location: "DADAR TRAM-TERMINUS", lat: 19.0178, lng: 72.8478, severity: "LOW", severityScore: 38,
-          suggestedDepartment: "HYDRO-RESOURCES", timestamp: Date.now() - 28800000, urgent: false, user: "SV-CITIZEN-41", votes: 9
+          suggestedDepartment: "HYDRO-RESOURCES", timestamp: Date.now() - 28800000, urgent: false, user: "SV-CITIZEN-41", votes: 9, isMock: true
         },
         {
           category: "Traffic Signal Grid Defect",
           desc: "Main cluster signals frozen on solid red loops across all intersections, forcing severe commuter lockups.",
           location: "WORLI NAKA", lat: 19.0030, lng: 72.8170, severity: "HIGH", severityScore: 78,
-          suggestedDepartment: "TRAFFIC-CONTROL-INFRA", timestamp: Date.now() - 5400000, urgent: true, user: "SV-CITIZEN-88", votes: 19
+          suggestedDepartment: "TRAFFIC-CONTROL-INFRA", timestamp: Date.now() - 5400000, urgent: true, user: "SV-CITIZEN-88", votes: 19, isMock: true
         },
         {
           category: "Structural Bridge Crack",
           desc: "Visible structural concrete shearing and deep fissure anomalies emerging on the primary eastern flyover underpass.",
           location: "KURLA EAST", lat: 19.0650, lng: 72.8794, severity: "CRITICAL", severityScore: 98,
-          suggestedDepartment: "CIVIL-ENG-AUDITS", timestamp: Date.now() - 900000, urgent: true, user: "SV-CITIZEN-12", votes: 64
+          suggestedDepartment: "CIVIL-ENG-AUDITS", timestamp: Date.now() - 900000, urgent: true, user: "SV-CITIZEN-12", votes: 64, isMock: true
         },
         {
           category: "Illegal Debris Dumping",
           desc: "Massive pile of concrete rubble and construction debris dropped overnight blocking the community park pathway.",
           location: "POWAI LAKE LINK", lat: 19.1264, lng: 72.9065, severity: "LOW", severityScore: 25,
-          suggestedDepartment: "CIVIC-HYGIENE-MGMT", timestamp: Date.now() - 32400000, urgent: false, user: "SV-ANON-NODE", votes: 2
+          suggestedDepartment: "CIVIC-HYGIENE-MGMT", timestamp: Date.now() - 32400000, urgent: false, user: "SV-ANON-NODE", votes: 2, isMock: true
         },
         {
           category: "Toxic Chemical Spillage",
           desc: "Oily industrial effluent drums leaked unidentified fluid slick spreading across the active commercial marketplace avenue.",
           location: "THANE REEFS", lat: 19.2184, lng: 72.9782, severity: "HIGH", severityScore: 88,
-          suggestedDepartment: "HAZMAT-ENVIRONMENT-CORP", timestamp: Date.now() - 4200000, urgent: true, user: "SV-CITIZEN-56", votes: 31
+          suggestedDepartment: "HAZMAT-ENVIRONMENT-CORP", timestamp: Date.now() - 4200000, urgent: true, user: "SV-CITIZEN-56", votes: 31, isMock: true
         },
         {
           category: "Collapsed Safety Railing",
           desc: "Pedestrian protective perimeter fencing damaged and leaning directly into the train track right-of-way corridor.",
           location: "SION STATION VECTOR", lat: 19.0392, lng: 72.8619, severity: "HIGH", severityScore: 80,
-          suggestedDepartment: "RAILWAY-TRANSIT-AUTHORITY", timestamp: Date.now() - 10800000, urgent: true, user: "SV-CITIZEN-204", votes: 22
+          suggestedDepartment: "RAILWAY-TRANSIT-AUTHORITY", timestamp: Date.now() - 10800000, urgent: true, user: "SV-CITIZEN-204", votes: 22, isMock: true
         },
         {
           category: "Mains Gas Pipeline Leak",
           desc: "Acre hiss noises and noticeable pressure loss anomalies reported near underground utility junctions.",
           location: "CHEMBUR NUCLEUS", lat: 19.0622, lng: 72.8974, severity: "CRITICAL", severityScore: 95,
-          suggestedDepartment: "NATURAL-GAS-GRID", timestamp: Date.now() - 300000, urgent: true, user: "SV-CITIZEN-119", votes: 73
+          suggestedDepartment: "NATURAL-GAS-GRID", timestamp: Date.now() - 300000, urgent: true, user: "SV-CITIZEN-119", votes: 73, isMock: true
         },
         {
           category: "Fallen Tree Obstruction",
           desc: "Large mature banyan branch collapsed clean across the service road layer, severing localized telecommunication paths.",
           location: "MALAD OVERPASS", lat: 19.1864, lng: 72.8484, severity: "MEDIUM", severityScore: 62,
-          suggestedDepartment: "PARKS-FORESTRY-RESCUE", timestamp: Date.now() - 16200000, urgent: false, user: "SV-CITIZEN-04", votes: 11
+          suggestedDepartment: "PARKS-FORESTRY-RESCUE", timestamp: Date.now() - 16200000, urgent: false, user: "SV-CITIZEN-04", votes: 11, isMock: true
         }
       ];
 
