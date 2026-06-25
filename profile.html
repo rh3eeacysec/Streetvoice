@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="modern">
 <head>
+  <link rel="icon" type="image/png" href="/favicon.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreetVoice — Node Configuration</title>
@@ -53,6 +55,17 @@
       object-fit: cover;
       display: block;
     }
+
+    .badge-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 8px;
+      text-align: center;
+      transition: all 0.25s ease;
+    }
+    .badge-card.locked { opacity: 0.35; filter: grayscale(0.6); }
+    .badge-card.unlocked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
   </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
@@ -108,6 +121,40 @@
       <button onclick="commitProfileChanges()" id="btn-save" class="w-full py-3 text-xs font-black uppercase tracking-widest rounded bg-cyan-500 text-slate-950 shadow-md">
         Save Identity Configuration
       </button>
+    </div>
+
+    <!-- ===== STREETCREDITS (real Firebase data) ===== -->
+    <div class="glass-card p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <h2 class="text-xl font-bold uppercase">StreetCredits</h2>
+        <span class="text-[10px] font-mono opacity-50 bg-black/20 px-2 py-1 rounded">🔒 FUTURE REWARD CONCEPT — NOT REAL CURRENCY</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span style="font-size:32px;">🪙</span>
+        <div>
+          <div id="credits-balance" class="text-4xl font-black" style="font-family: var(--font-heading);">0</div>
+          <div class="text-xs text-muted">Available StreetCredits</div>
+        </div>
+      </div>
+      <div id="credits-stats" class="grid grid-cols-2 gap-3 text-xs font-mono pt-2 border-t" style="border-color: var(--border);">
+        <div class="opacity-70">Reports filed: <span id="stat-reported" class="font-bold opacity-100">0</span></div>
+        <div class="opacity-70">Reports verified: <span id="stat-verified" class="font-bold opacity-100">0</span></div>
+      </div>
+      <p class="text-[11px] text-muted leading-relaxed">StreetCredits reward civic participation. They hold no real-world monetary value, cannot be bought or sold, and are not redeemable today — this is a gamification concept for future versions of StreetVoice.</p>
+    </div>
+
+    <!-- ===== BADGES (computed live from real Firebase stats) ===== -->
+    <div class="glass-card p-6 shadow-xl space-y-4">
+      <h2 class="text-xl font-bold uppercase">Badges</h2>
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-3" id="badges-grid-container"></div>
+    </div>
+
+    <!-- ===== REPORT HISTORY (real reports from Firebase, filtered to this user) ===== -->
+    <div class="glass-card p-6 shadow-xl space-y-4">
+      <h2 class="text-xl font-bold uppercase">Report History</h2>
+      <div id="report-history-container" class="space-y-2">
+        <div class="text-center p-6 text-muted font-mono text-xs">Loading your reports...</div>
+      </div>
     </div>
   </div>
 
@@ -192,10 +239,78 @@
       }
     }
 
+    const BADGE_DEFINITIONS = [
+      { id: 'first-report', icon: '📍', label: 'First Responder', check: (s) => s.reported >= 1 },
+      { id: 'verified-citizen', icon: '✅', label: 'Verified Citizen', check: (s) => s.verified >= 1 },
+      { id: 'street-scout', icon: '🔍', label: 'Street Scout', check: (s) => s.reported >= 5 },
+      { id: 'ward-watcher', icon: '👁️', label: 'Ward Watcher', check: (s) => s.verified >= 10 },
+      { id: 'civic-hero', icon: '🦸', label: 'Civic Hero', check: (s) => s.reported >= 10 },
+      { id: 'super-hero', icon: '🌟', label: 'Super Hero', check: (s) => s.reported >= 25 }
+    ];
+
+    function renderBadges(stats) {
+      const container = document.getElementById("badges-grid-container");
+      if (!container) return;
+      const s = stats || { reported: 0, verified: 0 };
+      container.innerHTML = BADGE_DEFINITIONS.map(b => {
+        const unlocked = b.check(s);
+        return `
+          <div class="badge-card ${unlocked ? 'unlocked' : 'locked'}">
+            <div style="font-size:28px;margin-bottom:6px;">${b.icon}</div>
+            <div class="font-bold" style="font-size:11px;">${b.label}</div>
+            <div style="font-size:9px;" class="text-muted mt-1">${unlocked ? 'Unlocked' : 'Locked'}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderReportHistory(reports) {
+      const container = document.getElementById("report-history-container");
+      if (!container) return;
+      if (!reports || reports.length === 0) {
+        container.innerHTML = `<div class="text-center p-6 text-muted font-mono text-xs">No reports filed yet — go file your first one on the Report page.</div>`;
+        return;
+      }
+      container.innerHTML = reports.map(r => `
+        <div class="flex flex-wrap justify-between items-center gap-2 p-3 rounded-lg" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
+          <div>
+            <div class="font-bold text-sm">${r.category || 'Untitled Report'}</div>
+            <div class="text-[10px] text-muted font-mono">${r.location || 'Unknown location'} • ${r.timestamp ? new Date(r.timestamp).toLocaleDateString() : ''}</div>
+          </div>
+          <div class="text-[10px] font-mono px-2 py-1 rounded bg-black/20">${(r.votes || 0)} votes</div>
+        </div>
+      `).join('');
+    }
+
+    function loadCreditsBadgesAndHistory(userId) {
+      if (!window.db) return;
+
+      db.ref(`users/${userId}`).on('value', (snap) => {
+        const data = snap.val() || {};
+        document.getElementById("credits-balance").textContent = (data.streetCredits || 0).toLocaleString();
+        const stats = data.stats || { reported: 0, verified: 0 };
+        document.getElementById("stat-reported").textContent = stats.reported || 0;
+        document.getElementById("stat-verified").textContent = stats.verified || 0;
+        renderBadges(stats);
+      });
+
+      db.ref('reports').orderByChild('user').equalTo(userId).on('value', (snap) => {
+        const data = snap.val() || {};
+        const myReports = Object.keys(data)
+          .map(key => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        renderReportHistory(myReports);
+      }, (err) => {
+        console.error("Report history read failed:", err);
+        renderReportHistory([]);
+      });
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       setGlobalEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
       buildAvatarSelectionGrid();
       initializeUserSession();
+      loadCreditsBadgesAndHistory(activeSessionUser);
     });
   </script>
 </body>
