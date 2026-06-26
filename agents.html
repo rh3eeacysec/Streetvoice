@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreetVoice — Live Orchestration Monitor</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <style>
     /* ==========================================================================
        THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
@@ -177,16 +180,27 @@
     </div>
   </header>
 
-  <div class="w-full max-w-5xl mx-auto mb-12 p-4 glass relative z-10 text-center">
-    <span class="text-xs font-mono font-bold uppercase tracking-wider block mb-3 opacity-60">🔧 Live Event Ingest Simulator (Async Telemetry)</span>
-    <div class="flex flex-wrap justify-center gap-2">
-      <button onclick="triggerAgent('1')" class="bg-sky-500/20 hover:bg-sky-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-sky-500/40 transition">Trigger Parser (A1)</button>
-      <button onclick="triggerAgent('2')" class="bg-purple-500/20 hover:bg-purple-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-purple-500/40 transition">Trigger Vision (A2)</button>
-      <button onclick="triggerAgent('3')" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-emerald-500/40 transition">Trigger Scanner (A3)</button>
-      <button onclick="triggerAgent('4')" class="bg-amber-500/20 hover:bg-amber-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-amber-500/40 transition">Trigger Linker (A4)</button>
-      <button onclick="triggerAgent('5')" class="bg-pink-500/20 hover:bg-pink-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-pink-500/40 transition">Trigger Allocator (A5)</button>
-      <button onclick="triggerAgent('6')" class="bg-red-500/20 hover:bg-red-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-red-500/40 transition">Trigger SLA (A6)</button>
-      <button onclick="clearAllMonitorNodes()" class="bg-white/10 hover:bg-white/20 text-xs font-mono font-bold px-3 py-1.5 rounded transition ml-4">Reset Monitor</button>
+  <div class="w-full max-w-5xl mx-auto mb-12 p-5 glass relative z-10 space-y-3">
+    <span class="text-xs font-mono font-bold uppercase tracking-wider block opacity-60" id="lbl-sim-title">⚡ Live Multi-Agent Pipeline — Gemini-Powered</span>
+
+    <div class="flex flex-wrap gap-2 items-stretch">
+      <select id="report-picker" onchange="loadPickedReportIntoInput()" class="flex-1 min-w-[200px] bg-black/30 border border-white/10 rounded px-3 py-2 text-xs font-mono">
+        <option value="">— Or pick one of your real reports —</option>
+      </select>
+    </div>
+
+    <textarea id="agent-input-text" rows="3" placeholder="Type or paste a citizen complaint here (e.g. 'Bada gaddha hai school ke saamne, gaadiyan slip ho rahi hain') — every agent below will analyze this exact text with Gemini."
+      class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-sky-400"></textarea>
+
+    <div class="flex flex-wrap justify-center gap-2 pt-1">
+      <button onclick="triggerAgent('1')" class="bg-sky-500/20 hover:bg-sky-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-sky-500/40 transition">Run Parser (A1)</button>
+      <button onclick="triggerAgent('2')" class="bg-purple-500/20 hover:bg-purple-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-purple-500/40 transition">Run Vision (A2)</button>
+      <button onclick="triggerAgent('3')" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-emerald-500/40 transition">Run Scanner (A3)</button>
+      <button onclick="triggerAgent('4')" class="bg-amber-500/20 hover:bg-amber-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-amber-500/40 transition">Run Linker (A4)</button>
+      <button onclick="triggerAgent('5')" class="bg-pink-500/20 hover:bg-pink-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-pink-500/40 transition">Run Allocator (A5)</button>
+      <button onclick="triggerAgent('6')" class="bg-red-500/20 hover:bg-red-500/40 text-xs font-mono font-bold px-3 py-1.5 rounded border border-red-500/40 transition">Run SLA (A6)</button>
+      <button onclick="runFullPipeline()" class="bg-white/15 hover:bg-white/25 text-xs font-mono font-bold px-4 py-1.5 rounded border border-white/30 transition ml-2">▶ Run Full Pipeline</button>
+      <button onclick="clearAllMonitorNodes()" class="bg-white/10 hover:bg-white/20 text-xs font-mono font-bold px-3 py-1.5 rounded transition">Reset Monitor</button>
     </div>
   </div>
 
@@ -214,6 +228,7 @@
           <div>
             <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
             <div class="pulse-bar"><div class="progress" id="p-1"></div></div>
+            <div id="output-1" class="hidden mt-3 text-[11px] font-mono leading-relaxed p-3 rounded-lg bg-black/30 border border-white/10"></div>
           </div>
         </div>
       </div>
@@ -233,6 +248,7 @@
           <div>
             <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
             <div class="pulse-bar"><div class="progress" id="p-2"></div></div>
+            <div id="output-2" class="hidden mt-3 text-[11px] font-mono leading-relaxed p-3 rounded-lg bg-black/30 border border-white/10"></div>
           </div>
         </div>
       </div>
@@ -252,6 +268,7 @@
           <div>
             <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
             <div class="pulse-bar"><div class="progress" id="p-3"></div></div>
+            <div id="output-3" class="hidden mt-3 text-[11px] font-mono leading-relaxed p-3 rounded-lg bg-black/30 border border-white/10"></div>
           </div>
         </div>
       </div>
@@ -271,6 +288,7 @@
           <div>
             <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
             <div class="pulse-bar"><div class="progress" id="p-4"></div></div>
+            <div id="output-4" class="hidden mt-3 text-[11px] font-mono leading-relaxed p-3 rounded-lg bg-black/30 border border-white/10"></div>
           </div>
         </div>
       </div>
@@ -290,6 +308,7 @@
           <div>
             <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
             <div class="pulse-bar"><div class="progress" id="p-5"></div></div>
+            <div id="output-5" class="hidden mt-3 text-[11px] font-mono leading-relaxed p-3 rounded-lg bg-black/30 border border-white/10"></div>
           </div>
         </div>
       </div>
@@ -309,6 +328,7 @@
           <div>
             <div class="text-[10px] font-mono opacity-60 mb-2 status-text">STATUS: STANDBY</div>
             <div class="pulse-bar"><div class="progress" id="p-6"></div></div>
+            <div id="output-6" class="hidden mt-3 text-[11px] font-mono leading-relaxed p-3 rounded-lg bg-black/30 border border-white/10"></div>
           </div>
         </div>
       </div>
@@ -382,77 +402,149 @@
     }
 
     /* ==========================================================================
-       ADAPTED STATE CONTROLLER PIPELINE ENGINE WITH BACKEND TELEMETRY FETCH
+       REAL MULTI-AGENT ENGINE — each agent calls Gemini with its own persona
        ========================================================================== */
+    const AGENT_API_URL = 'http://localhost:3000/api/run-agent';
+    let reportsCache = [];
+
+    function getCurrentInputText() {
+      return document.getElementById("agent-input-text").value.trim();
+    }
+
+    async function loadReportPickerOptions() {
+      const picker = document.getElementById("report-picker");
+      if (!window.db) return;
+      try {
+        const snap = await db.ref('reports').limitToLast(20).once('value');
+        const data = snap.val() || {};
+        reportsCache = Object.keys(data).map(key => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        reportsCache.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = `${r.category || 'Report'} — ${(r.desc || r.location || '').slice(0, 50)}`;
+          picker.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Could not load reports into picker:", err);
+      }
+    }
+
+    function loadPickedReportIntoInput() {
+      const picker = document.getElementById("report-picker");
+      const report = reportsCache.find(r => r.id === picker.value);
+      if (!report) return;
+      const text = `${report.category ? `[${report.category}] ` : ''}${report.desc || ''}${report.location ? ` (Location: ${report.location})` : ''}`;
+      document.getElementById("agent-input-text").value = text.trim();
+    }
+
     async function triggerAgent(agentId) {
       const card = document.querySelector(`[data-agent="${agentId}"]`);
       if (!card) return;
-      
+
+      const inputText = getCurrentInputText();
+      const dict = locales[currentLanguage];
+
+      if (!inputText) {
+        alert("Type a citizen complaint (or pick one of your real reports) before running an agent.");
+        return;
+      }
+
       const progressBar = document.getElementById(`p-${agentId}`);
       const statusText = card.querySelector('.status-text');
-      const dict = locales[currentLanguage];
-      
+      const outputBox = document.getElementById(`output-${agentId}`);
+
       // Phase 1: Set Active / Processing States
       card.classList.add('active');
       card.classList.add('border-accent');
       progressBar.style.animationPlayState = 'running';
-      progressBar.style.width = "40%"; 
-      
+      progressBar.style.width = "40%";
+      outputBox.classList.add("hidden");
+
       if (statusText) {
         statusText.textContent = dict.statusActive;
         statusText.className = "text-[10px] font-mono text-cyan-400 font-bold status-text";
       }
-      
-      // Soften neighboring modules for visualization focus
+
       document.querySelectorAll('.agent-card').forEach(c => {
         if (c !== card) c.style.opacity = "0.2";
       });
 
-      // Illuminate the incoming tracing channel vector
       const internalId = parseInt(agentId);
       if (internalId > 1) {
         const fillPath = document.getElementById(`fill-path-${internalId - 1}`);
         if (fillPath) fillPath.style.strokeDashoffset = "0";
       }
 
-      // Phase 2: Execute Live Production Telemetry Request
-      try {
-        const response = await fetch('http://localhost:3000/api/generate-slogan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ problemContext: `Node Trigger Agent ${agentId}`, tone: "formal" })
-        });
-        const data = await response.json();
-        console.log(`Telemetry Data (Agent ${agentId}):`, data.telemetry);
-      } catch (e) {
-        console.error(`Backend offline or unreachable for Agent ${agentId}`);
+      // Phase 2: Build real extra context for the Area Scanner (Agent 3) —
+      // a genuine Firebase query, not a guess, counting nearby same-category reports.
+      let extraContext = null;
+      if (agentId === '3' && window.db) {
+        try {
+          const snap = await db.ref('reports').once('value');
+          const all = snap.val() || {};
+          const lowerInput = inputText.toLowerCase();
+          const nearbyCount = Object.values(all).filter(r =>
+            r.category && lowerInput.includes(r.category.toLowerCase().split(' ')[0])
+          ).length;
+          extraContext = `There are currently ${nearbyCount} existing report(s) in this category in the database.`;
+        } catch (err) {
+          console.error("Area Scanner real-count lookup failed:", err);
+        }
       }
 
-      // Phase 3: Complete and Settle Agent State Pipeline
+      // Phase 3: Real Gemini call
+      try {
+        const response = await fetch(AGENT_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agentId, inputText, extraContext })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Server responded ${response.status}`);
+        }
+
+        const data = await response.json();
+        outputBox.textContent = data.output;
+        outputBox.classList.remove("hidden");
+
+      } catch (err) {
+        console.error(`Agent ${agentId} failed:`, err);
+        outputBox.textContent = `⚠️ ${err.message || "Could not reach Gemini — is server.js running on port 3000?"}`;
+        outputBox.classList.remove("hidden");
+        outputBox.classList.add("text-red-400");
+      }
+
+      // Phase 4: Settle states
       card.classList.remove('active');
       card.classList.remove('border-accent');
       progressBar.style.animationPlayState = 'paused';
-      progressBar.style.width = "100__container"; // fallback safety
       progressBar.style.width = "100%";
       card.style.opacity = "0.7";
-      
+
       if (statusText) {
         statusText.textContent = dict.statusDone;
         statusText.className = "text-[10px] font-mono text-emerald-400 font-bold status-text";
       }
-      
-      // Light up next directional trace vector link
+
       if (internalId <= 5) {
         const fillPath = document.getElementById(`fill-path-${internalId}`);
         if (fillPath) fillPath.style.strokeDashoffset = "0";
       }
 
-      // Restore neighboring items' ambient values
       document.querySelectorAll('.agent-card').forEach(c => {
         if (!c.classList.contains('active') && c.querySelector('.progress').style.width !== '100%') {
           c.style.opacity = "0.4";
         }
       });
+    }
+
+    async function runFullPipeline() {
+      for (let i = 1; i <= 6; i++) {
+        await triggerAgent(String(i));
+      }
     }
 
     /* ==========================================================================
@@ -500,11 +592,15 @@
         const card = document.querySelector(`[data-agent="${i}"]`);
         const progressBar = document.getElementById(`p-${i}`);
         const statusText = card.querySelector('.status-text');
+        const outputBox = document.getElementById(`output-${i}`);
         
         card.classList.remove('active', 'border-accent');
         progressBar.style.animationPlayState = 'paused';
         progressBar.style.width = "0%";
         card.style.opacity = "0.4";
+        outputBox.classList.add("hidden");
+        outputBox.classList.remove("text-red-400");
+        outputBox.textContent = "";
         
         if (statusText) {
           statusText.textContent = dict.statusIdle;
@@ -522,8 +618,8 @@
       setEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
       updatePageLanguage(localStorage.getItem('streetvoice_lang') || 'en');
       setTimeout(drawStaticBackgroundPaths, 400);
+      loadReportPickerOptions();
     };
   </script>
-  <script src="cursor.js"></script>
 </body>
 </html>
