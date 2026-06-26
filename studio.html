@@ -175,33 +175,29 @@
       document.getElementById("canvas-slogan").textContent = dict.canvasProcessing;
       btn.disabled = true;
 
-      const GEMINI_API_KEY = "YOUR_GOOGLE_AI_STUDIO_API_KEY"; 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-      const promptText = `You are an elite public administrative communication analyst assistant.
-      Draft a formal, respectful, highly objective, and constructive headline text phrase suitable for a public notice, civic awareness banner, or neighborhood bulletin regarding this matter: "${problemContext}".
-      The linguistic layout style must carefully conform to this framing archetype: "${tone}".
-      The phrasing must be entirely respectful to municipal authorities and focus on constructive civic improvement or public cooperation.
-      Do not include any aggressive words, exclamation overloads, sarcasm, or emojis. Keep it under 10 clear words total. Return strictly the unquoted string text.`;
+      // Routed through server.js, which holds the real GEMINI_API_KEY securely server-side.
+      const endpoint = 'http://localhost:3000/api/generate-slogan';
 
       try {
         const response = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }]
-          })
+          body: JSON.stringify({ problemContext, tone })
         });
-        
+
+        if (!response.ok) {
+          throw new Error(`Server responded ${response.status}`);
+        }
+
         const data = await response.json();
-        const generatedText = data.candidates[0].content.parts[0].text.trim();
-        
+        const generatedText = data.slogan;
+
         document.getElementById("canvas-slogan").textContent = generatedText;
         document.getElementById("canvas-context-sub").textContent = `NOTICE REF: ${problemContext}`;
         document.getElementById("btn-download").classList.remove("hidden");
       } catch (err) {
-        console.error(err);
-        document.getElementById("canvas-slogan").textContent = dict.canvasErr;
+        console.error("Studio Agent request failed:", err);
+        document.getElementById("canvas-slogan").textContent = `⚠️ ${dict.canvasErr} (Is server.js running on port 3000?)`;
       } finally {
         btn.disabled = false;
         btn.textContent = "Generate Notice via Studio Agent";
@@ -228,6 +224,5 @@
       updatePageLanguage(savedLang);
     };
   </script>
-  <script src="cursor.js"></script>
 </body>
 </html>
