@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StreetVoice - Welcome</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <style>
     body {
       margin: 0;
@@ -223,7 +226,8 @@
         placeholderToken: "e.g., SV-MUM-RHEA-4821",
         msgSuccess: "Success! Account Assigned: ",
         msgWelcomeBack: "Welcome back. Syncing profile metrics...",
-        msgErrNotFound: "Identifier not found. Please review the key entry."
+        msgErrNotFound: "Identifier not found. Please review the key entry.",
+        msgChecking: "Checking local and cloud records..."
       },
       hi: {
         switchEra: "डिज़ाइन जनरेशन:",
@@ -251,7 +255,8 @@
         placeholderToken: "जैसे: SV-MUM-RHEA-4821",
         msgSuccess: "सफलता! नया अकाउंट आईडी: ",
         msgWelcomeBack: "स्वागत है। प्रोफाइल डेटा लोड हो रहा है...",
-        msgErrNotFound: "पहचानकर्ता नहीं मिला। कृपया अपनी टोकन कुंजी दोबारा जांचें।"
+        msgErrNotFound: "पहचानकर्ता नहीं मिला। कृपया अपनी टोकन कुंजी दोबारा जांचें।",
+        msgChecking: "लोकल और क्लाउड रिकॉर्ड जांचे जा रहे हैं..."
       }
     };
 
@@ -273,7 +278,7 @@
       document.getElementById("lbl-tagline").textContent = dict.tagline;
       document.getElementById("lbl-hero-headline").innerHTML = dict.heroHeadline;
       document.getElementById("lbl-hero-subtext").textContent = dict.heroSubtext;
-      
+
       document.getElementById("lbl-feat1-title").textContent = dict.feat1Title;
       document.getElementById("lbl-feat1-desc").textContent = dict.feat1Desc;
       document.getElementById("lbl-feat2-title").textContent = dict.feat2Title;
@@ -286,7 +291,7 @@
       document.getElementById("lbl-reg-title").textContent = dict.regTitle;
       document.getElementById("lbl-reg-sub").textContent = dict.regSub;
       document.getElementById("btn-reg-submit").textContent = dict.regSubmit;
-      
+
       document.getElementById("lbl-login-title").textContent = dict.loginTitle;
       document.getElementById("lbl-login-sub").textContent = dict.loginSub;
       document.getElementById("btn-login-submit").textContent = dict.loginSubmit;
@@ -335,6 +340,19 @@
       localStorage.setItem(`streetvoice_user_${id}`, JSON.stringify(user));
       localStorage.setItem("streetvoice_current_user", id);
 
+      // ===== FIREBASE: register this citizen in the real database =====
+      // Without this, the account only ever existed in this one browser —
+      // it wouldn't show on the leaderboard or be loggable-into from another device.
+      if (window.db) {
+        db.ref(`users/${id}`).set({
+          name, city, email,
+          streetCredits: 100,
+          stats: { reported: 0, verified: 0 }
+        }).catch(err => console.error("Firebase user registration failed:", err));
+      } else {
+        console.warn("Firebase not initialized — account saved locally only. Check firebase-config.js");
+      }
+
       message.textContent = `${dict.msgSuccess}${id}`;
       message.className = "text-sm mt-3 success";
       setTimeout(() => { window.location.href = "dashboard.html"; }, 900);
@@ -346,29 +364,72 @@
       const enteredId = document.getElementById("old-id").value.trim().toUpperCase();
       const message = document.getElementById("old-user-message");
       const dict = locales[currentLanguage];
-      const user = getUserById(enteredId);
 
-      if (!user) {
+      message.textContent = dict.msgChecking;
+      message.className = "text-sm mt-3";
+
+      // 1. Check this browser's local cache first (fast path)
+      const localUser = getUserById(enteredId);
+      if (localUser) {
+        localStorage.setItem("streetvoice_current_user", localUser.id);
+        message.textContent = dict.msgWelcomeBack;
+        message.className = "text-sm mt-3 success";
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 700);
+        return;
+      }
+
+      // 2. Not found locally (e.g. new device/browser) — check the real Firebase record
+      if (!window.db) {
         message.textContent = dict.msgErrNotFound;
         message.className = "text-sm mt-3 error";
         return;
       }
 
-      localStorage.setItem("streetvoice_current_user", user.id);
-      message.textContent = dict.msgWelcomeBack;
-      message.className = "text-sm mt-3 success";
-      setTimeout(() => { window.location.href = "dashboard.html"; }, 700);
+      db.ref(`users/${enteredId}`).once('value').then((snap) => {
+        const cloudUser = snap.val();
+        if (!cloudUser) {
+          message.textContent = dict.msgErrNotFound;
+          message.className = "text-sm mt-3 error";
+          return;
+        }
+
+        // Reconstruct a local session record from the cloud data so the rest
+        // of the app (which still reads/writes localStorage as a session cache) works normally.
+        const rebuiltUser = {
+          id: enteredId,
+          name: cloudUser.name || enteredId,
+          initials: getInitials(cloudUser.name || enteredId),
+          city: cloudUser.city || "",
+          email: cloudUser.email || "",
+          level: cloudUser.level || 1,
+          streetCredits: cloudUser.streetCredits || 0,
+          stats: cloudUser.stats || { reported: 0, verified: 0 },
+          reports: []
+        };
+
+        localStorage.setItem(`streetvoice_user_${enteredId}`, JSON.stringify(rebuiltUser));
+        localStorage.setItem("streetvoice_current_user", enteredId);
+
+        message.textContent = dict.msgWelcomeBack;
+        message.className = "text-sm mt-3 success";
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 700);
+
+      }).catch((err) => {
+        console.error("Firebase login lookup failed:", err);
+        message.textContent = dict.msgErrNotFound;
+        message.className = "text-sm mt-3 error";
+      });
     });
 
     // Configuration Initialization
     window.onload = function() {
       const activeEra = localStorage.getItem('streetvoice_era_theme') || 'modern';
       setEra(activeEra);
-      
+
       const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
       updatePageLanguage(savedLang);
     };
   </script>
+  <script src="cursor.js"></script>
 </body>
-<script src="cursor.js"></script>
 </html>
