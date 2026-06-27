@@ -7,7 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="app-config.js"></script>
   <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
+  <script src="credits.js"></script>
+  <script src="toast.js"></script>
   <style>
     /* ==========================================================================
        THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
@@ -404,7 +409,7 @@
     /* ==========================================================================
        REAL MULTI-AGENT ENGINE — each agent calls Gemini with its own persona
        ========================================================================== */
-    const AGENT_API_URL = 'http://localhost:3000/api/run-agent';
+    const AGENT_API_URL = (window.API_BASE_URL || 'http://localhost:3000') + '/api/run-agent';
     let reportsCache = [];
 
     function getCurrentInputText() {
@@ -414,6 +419,12 @@
     async function loadReportPickerOptions() {
       const picker = document.getElementById("report-picker");
       if (!window.db) return;
+
+      // Wait for anonymous auth to resolve — DB rules require auth != null
+      // to read reports/. Without this, the read fires before sign-in
+      // completes and gets rejected.
+      if (window.authReady) await window.authReady;
+
       try {
         const snap = await db.ref('reports').limitToLast(20).once('value');
         const data = snap.val() || {};
@@ -481,6 +492,7 @@
       let extraContext = null;
       if (agentId === '3' && window.db) {
         try {
+          if (window.authReady) await window.authReady;
           const snap = await db.ref('reports').once('value');
           const all = snap.val() || {};
           const lowerInput = inputText.toLowerCase();
