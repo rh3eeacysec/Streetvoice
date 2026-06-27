@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="modern">
 <head>
+  <link rel="icon" type="image/png" href="/favicon.png">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreetVoice — The Architect</title>
+  <title>StreetVoice — The Engineer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ==========================================================================
@@ -55,7 +57,44 @@
       font-family: var(--font); 
       transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease; 
       overflow-x: hidden;
+      position: relative;
     }
+
+    /* ==========================================================================
+       BACKGROUND VIDEO LAYER — same video + translucent-overlay pattern as
+       index.html, adapted to this page's CSS-variable theme structure.
+       Fixed so it stays put behind the whole 150vh scrolling page instead
+       of scrolling away with the content.
+       ========================================================================== */
+    #bg-video-layer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: var(--bg);
+      opacity: 0.88;
+      transition: background 0.4s ease, opacity 0.4s ease;
+      pointer-events: none;
+    }
+    /* 90s theme is bright/editorial — needs a stronger light overlay so the
+       video doesn't fight the paper-white aesthetic. */
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
     .glass { 
       background: var(--surface); 
       border: 1px solid var(--border); 
@@ -111,6 +150,13 @@
 </head>
 <body class="p-4 md:p-12 relative min-h-[150vh]">
 
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
+
   <svg class="scroll-svg-canvas" id="architect-canvas">
     <path id="bg-trace" class="scroll-path" />
     <path id="scroll-fill" class="scroll-path-fill" />
@@ -135,7 +181,7 @@
     
     <section id="node-1" class="glass p-8 md:p-10 shadow-2xl">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <h2 class="text-3xl md:text-4xl font-black tracking-tight">The Architect</h2>
+        <h2 class="text-3xl md:text-4xl font-black tracking-tight">The Engineer</h2>
         <span class="text-xs font-mono font-bold tracking-widest px-3 py-1 bg-white/5 border border-white/10 rounded-full w-max">ROLE // SEC_ENG</span>
       </div>
       <p class="opacity-80 leading-relaxed text-sm md:text-base">
@@ -276,6 +322,16 @@
       
       setTimeout(buildVectorBlueprintPath, 500);
     };
+
+    // ===== BACKGROUND VIDEO: graceful fallback if bg_index.mp4 fails to load =====
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load — check it sits next to about.html.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
   </script>
   <script src="cursor.js"></script>
 </body>
