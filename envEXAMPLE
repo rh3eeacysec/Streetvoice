@@ -1,0 +1,7 @@
+# StreetVoice — Environment Variables Template
+# Copy this file to ".env" (same folder) and fill in your real API key.
+# NEVER commit the actual ".env" file — it's already in .gitignore.
+
+# Get your key from Google AI Studio (aistudio.google.com) -> Get API Key
+# or from Google Cloud Console -> APIs & Services -> Credentials
+GEMINI_API_KEY=your_gemini_api_key_here
