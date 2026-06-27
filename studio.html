@@ -6,6 +6,8 @@
   <title>StreetVoice — Civic Poster Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="app-config.js"></script>
+  <script src="toast.js"></script>
   <style>
     /* ==========================================================================
        THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
@@ -97,41 +99,83 @@
   <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
     <div class="glass p-6 space-y-4 text-xs shadow-xl animate-fade-up" style="animation-delay: 0.1s;">
       <h2 class="text-2xl font-black tracking-tight" id="txt-title">Civic Poster Studio</h2>
-      
-      <input type="text" id="issue-selector" class="input font-semibold" placeholder="e.g., Unresolved waste aggregation on public walkway">
-      
+
+      <select id="category-selector" class="input font-semibold cursor-pointer">
+        <option value="Pothole">Pothole</option>
+        <option value="Road Damage">Road Damage</option>
+        <option value="Broken Streetlight">Broken Streetlight</option>
+        <option value="Garbage Overflow">Garbage Overflow</option>
+        <option value="Water Leakage">Water Leakage</option>
+        <option value="Blocked Drain">Blocked Drain</option>
+        <option value="Damaged Footpath">Damaged Footpath</option>
+        <option value="Open Manhole">Open Manhole</option>
+        <option value="Traffic Signal Issue">Traffic Signal Issue</option>
+        <option value="Public Safety Hazard">Public Safety Hazard</option>
+        <option value="Illegal Dumping">Illegal Dumping</option>
+        <option value="Public Toilet Issue">Public Toilet Issue</option>
+        <option value="Park Maintenance Issue">Park Maintenance Issue</option>
+      </select>
+
+      <input type="text" id="location-input" class="input font-semibold" placeholder="Location (e.g., Linking Road, Bandra West)">
+
+      <input type="text" id="issue-selector" class="input font-semibold" placeholder="Describe the issue, e.g., Unresolved waste aggregation on public walkway">
+
       <select id="tone-selector" class="input font-semibold cursor-pointer">
         <option value="constructive">Constructive Notice / Request for Attention</option>
         <option value="public-safety">Public Safety Announcement / Awareness</option>
         <option value="community-call">Civic Duty & Community Cooperation Call</option>
       </select>
-      
+
       <button onclick="generateLivePoster()" id="btn-generate" class="w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-md accent" style="border-radius: var(--radius);">
         Generate Notice via Studio Agent
       </button>
 
-      <button onclick="downloadMeme()" id="btn-download" class="hidden w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all bg-emerald-500 hover:bg-emerald-600 text-slate-900 shadow-md" style="border-radius: var(--radius);">
-        📥 Export Vector Graphics PNG
-      </button>
+      <div class="hidden grid grid-cols-2 gap-2" id="action-buttons-row">
+        <button onclick="downloadMeme()" id="btn-download" class="w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all bg-emerald-500 hover:bg-emerald-600 text-slate-900 shadow-md" style="border-radius: var(--radius);">
+          📥 Download
+        </button>
+        <button onclick="sharePoster()" id="btn-share" class="w-full py-4 rounded-xl font-black uppercase tracking-wider text-xs transition-all bg-sky-500 hover:bg-sky-600 text-slate-900 shadow-md" style="border-radius: var(--radius);">
+          📤 Share
+        </button>
+      </div>
+
+      <p class="text-[10px] opacity-60 leading-relaxed pt-1" id="txt-share-nudge">
+        Share this with friends, family, and neighbours — a louder, more visible community is harder for civic issues to stay ignored.
+      </p>
     </div>
 
     <div class="flex justify-center items-center p-2 animate-fade-up" style="animation-delay: 0.2s;">
-      <div id="poster-canvas" class="w-full max-w-sm aspect-[4/5] p-8 flex flex-col justify-between border-2 relative overflow-hidden transition-all shadow-2xl" style="border-color: var(--border); background-color: var(--bg); border-radius: var(--radius);">
-        <div class="flex justify-between items-start font-mono text-[9px] uppercase tracking-widest opacity-60">
-          <div>[STREETVOICE CIVIC INTEL]</div>
-          <div>OFFICIAL NOTICE LAYOUT</div>
+      <div id="poster-canvas" class="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative">
+        <div id="poster-image-layer" class="w-full h-40 bg-cover bg-center transition-all" style="background-color: #1e293b; background-image: none;">
+          <div id="poster-image-loading" class="hidden w-full h-full flex items-center justify-center bg-black/40 text-[10px] font-mono text-white/70">
+            🎨 AI is illustrating your poster...
+          </div>
         </div>
-
-        <div class="my-auto text-center">
-          <h2 id="canvas-slogan" class="text-xl md:text-2xl font-black uppercase tracking-tight break-words leading-tight">
-            Provide issue parameters to compile objective bulletin announcement...
-          </h2>
-          <p id="canvas-context-sub" class="text-xs font-mono opacity-50 mt-4 tracking-wide truncate max-w-xs mx-auto uppercase"></p>
+        <div id="poster-color-band" class="p-6 text-white transition-colors" style="background: #ea580c;">
+          <div class="flex justify-between items-center text-[10px] font-mono uppercase tracking-widest opacity-90">
+            <span>StreetVoice Civic Alert</span>
+            <span id="poster-severity-badge">—</span>
+          </div>
+          <div class="flex items-center gap-3 mt-4">
+            <span id="poster-icon" class="text-4xl">📣</span>
+            <h2 id="canvas-slogan" class="text-xl font-black leading-tight">
+              Fill in the details and generate a poster
+            </h2>
+          </div>
         </div>
-
-        <div class="flex justify-between items-end font-mono text-[8px] opacity-40 border-t pt-2" style="border-color: var(--border);">
-          <div>GEN-ENGINE: GEMINI-FLASH</div>
-          <div>STATUS: AUTHENTICATED</div>
+        <div class="p-6 text-white space-y-3" style="background: #1e293b;">
+          <p id="poster-subtext" class="text-sm opacity-90 leading-relaxed"></p>
+          <div class="grid grid-cols-2 gap-2 text-[10px] font-mono pt-2 border-t border-white/10">
+            <div class="opacity-70">📍 <span id="poster-location-display"></span></div>
+            <div class="opacity-70 text-right">🗂️ <span id="poster-category-display"></span></div>
+          </div>
+          <div class="flex justify-between items-center pt-3 border-t border-white/10">
+            <div>
+              <div id="poster-hashtag" class="text-sky-400 font-bold text-sm"></div>
+              <p id="canvas-context-sub" class="text-[9px] opacity-50 font-mono mt-1"></p>
+            </div>
+            <img id="poster-qr" class="w-16 h-16 rounded bg-white p-1 hidden" src="" alt="QR code" />
+          </div>
         </div>
       </div>
     </div>
@@ -141,11 +185,19 @@
     const locales = {
       en: {
         canvasProcessing: "⚡ ENGINE CALL: Processing objective bulletin text...",
-        canvasErr: "[ERROR]: Core matrix request timeout configuration exception."
+        canvasErr: "[ERROR]: Core matrix request timeout configuration exception.",
+        imageGenerating: "🎨 AI is illustrating your poster...",
+        imageErr: "AI artwork unavailable — showing text-only poster.",
+        shareCopied: "Link copied! Paste it anywhere to share.",
+        shareFailed: "Could not share — try the download button instead."
       },
       hi: {
         canvasProcessing: "⚡ एआई इंजन: आधिकारिक सूचना पाठ तैयार किया जा रहा है...",
-        canvasErr: "[त्रुटि]: सर्वर रिस्पांस कनेक्शन विफल रहा।"
+        canvasErr: "[त्रुटि]: सर्वर रिस्पांस कनेक्शन विफल रहा।",
+        imageGenerating: "🎨 एआई आपका पोस्टर बना रहा है...",
+        imageErr: "एआई इमेज उपलब्ध नहीं — सिर्फ टेक्स्ट पोस्टर दिखाया जा रहा है।",
+        shareCopied: "लिंक कॉपी हो गया! इसे कहीं भी साझा करें।",
+        shareFailed: "साझा नहीं हो सका — डाउनलोड बटन आज़माएं।"
       }
     };
 
@@ -159,45 +211,104 @@
     function updatePageLanguage(lang) {
       currentLanguage = lang;
       localStorage.setItem('streetvoice_lang', lang);
+      const dict = locales[lang] || locales.en;
+
+      const titleEl = document.getElementById("txt-title");
+      const nudgeEl = document.getElementById("txt-share-nudge");
+      if (titleEl) titleEl.textContent = lang === 'hi' ? "नागरिक पोस्टर स्टूडियो" : "Civic Poster Studio";
+      if (nudgeEl) {
+        nudgeEl.textContent = lang === 'hi'
+          ? "इसे अपने दोस्तों, परिवार और पड़ोसियों के साथ साझा करें — एक जागरूक समुदाय नागरिक समस्याओं को नज़रअंदाज़ नहीं होने देता।"
+          : "Share this with friends, family, and neighbours — a louder, more visible community is harder for civic issues to stay ignored.";
+      }
     }
 
     async function generateLivePoster() {
-      const problemContext = document.getElementById("issue-selector").value.trim();
+      const category = document.getElementById("category-selector").value;
+      const location = document.getElementById("location-input").value.trim();
+      const desc = document.getElementById("issue-selector").value.trim();
       const tone = document.getElementById("tone-selector").value;
       const btn = document.getElementById("btn-generate");
       const dict = locales[currentLanguage] || locales.en;
+      const apiBase = window.API_BASE_URL || 'http://localhost:3000';
 
-      if (!problemContext) {
-        alert("Please specify the infrastructure parameter item context first.");
+      if (!desc) {
+        alert("Please describe the issue first.");
         return;
       }
 
       document.getElementById("canvas-slogan").textContent = dict.canvasProcessing;
+      document.getElementById("poster-image-loading").classList.remove("hidden");
+      document.getElementById("poster-image-loading").textContent = dict.imageGenerating;
       btn.disabled = true;
 
-      // Routed through server.js, which holds the real GEMINI_API_KEY securely server-side.
-      const endpoint = 'http://localhost:3000/api/generate-slogan';
+      // ===== Fire both calls in parallel: text content + AI illustration =====
+      // Run together (not sequentially) so the wait feels like one step, not two.
+      const textPromise = fetch(`${apiBase}/api/generate-poster`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, location, desc, tone })
+      });
+
+      const imagePromise = fetch(`${apiBase}/api/generate-poster-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category, location, desc, tone })
+      }).catch(err => {
+        console.warn("Poster image generation request failed:", err);
+        return null;
+      });
 
       try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ problemContext, tone })
-        });
-
+        const response = await textPromise;
         if (!response.ok) {
           throw new Error(`Server responded ${response.status}`);
         }
 
-        const data = await response.json();
-        const generatedText = data.slogan;
+        const poster = await response.json();
 
-        document.getElementById("canvas-slogan").textContent = generatedText;
-        document.getElementById("canvas-context-sub").textContent = `NOTICE REF: ${problemContext}`;
-        document.getElementById("btn-download").classList.remove("hidden");
+        document.getElementById("poster-color-band").style.background = poster.primaryColor;
+        document.getElementById("poster-severity-badge").textContent = poster.severity;
+        document.getElementById("poster-icon").textContent = poster.icon;
+        document.getElementById("canvas-slogan").textContent = poster.headline;
+        document.getElementById("poster-subtext").textContent = poster.subtext;
+        document.getElementById("poster-location-display").textContent = location || "Unspecified";
+        document.getElementById("poster-category-display").textContent = category;
+        document.getElementById("poster-hashtag").textContent = poster.hashtag;
+        document.getElementById("canvas-context-sub").textContent = `Ref: STUDIO-${Date.now().toString().slice(-6)}`;
+
+        // Real ticket-submission link instead of a page that doesn't exist —
+        // QR code now points somewhere a scanning citizen can actually act on.
+        const reportUrl = `${window.location.origin}/report.html`;
+        const qrImg = document.getElementById("poster-qr");
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(reportUrl)}`;
+        qrImg.classList.remove("hidden");
+
+        document.getElementById("action-buttons-row").classList.remove("hidden");
+
+        // ===== Handle the AI illustration result (whenever it lands) =====
+        const imgRes = await imagePromise;
+        const imageLoadingEl = document.getElementById("poster-image-loading");
+        const imageLayer = document.getElementById("poster-image-layer");
+
+        if (imgRes && imgRes.ok) {
+          const imgData = await imgRes.json();
+          if (imgData.imageDataUrl) {
+            imageLayer.style.backgroundImage = `url('${imgData.imageDataUrl}')`;
+            imageLoadingEl.classList.add("hidden");
+          } else {
+            imageLoadingEl.textContent = dict.imageErr;
+            setTimeout(() => imageLoadingEl.classList.add("hidden"), 2500);
+          }
+        } else {
+          imageLoadingEl.textContent = dict.imageErr;
+          setTimeout(() => imageLoadingEl.classList.add("hidden"), 2500);
+        }
+
       } catch (err) {
         console.error("Studio Agent request failed:", err);
         document.getElementById("canvas-slogan").textContent = `⚠️ ${dict.canvasErr} (Is server.js running on port 3000?)`;
+        document.getElementById("poster-image-loading").classList.add("hidden");
       } finally {
         btn.disabled = false;
         btn.textContent = "Generate Notice via Studio Agent";
@@ -205,7 +316,7 @@
     }
 
     function downloadMeme() {
-      html2canvas(document.getElementById("poster-canvas"), { 
+      return html2canvas(document.getElementById("poster-canvas"), { 
         useCORS: true, 
         backgroundColor: null,
         scale: 2
@@ -214,7 +325,69 @@
         link.download = `streetvoice-notice-${Date.now()}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
+        return canvas;
       });
+    }
+
+    /* ==========================================================================
+       SHARE — uses the native Web Share API where supported (mobile browsers:
+       opens the OS share sheet, can share an actual image file to WhatsApp/
+       Instagram/etc directly). Falls back to copying a shareable link on
+       desktop browsers that don't support sharing files via navigator.share.
+       ========================================================================== */
+    async function sharePoster() {
+      const dict = locales[currentLanguage] || locales.en;
+      const btn = document.getElementById("btn-share");
+      const headline = document.getElementById("canvas-slogan").textContent || "Civic issue reported via StreetVoice";
+      const reportUrl = `${window.location.origin}/report.html`;
+
+      try {
+        const canvas = await html2canvas(document.getElementById("poster-canvas"), {
+          useCORS: true, backgroundColor: null, scale: 2
+        });
+
+        // Try sharing the actual poster image (works on most mobile browsers)
+        if (navigator.canShare) {
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+          const file = new File([blob], `streetvoice-notice.png`, { type: "image/png" });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: "StreetVoice Civic Alert",
+              text: `${headline}\n\nReport civic issues in your area: ${reportUrl}`
+            });
+            return;
+          }
+        }
+
+        // Fallback 1: share a text+link (no image) via Web Share API
+        if (navigator.share) {
+          await navigator.share({
+            title: "StreetVoice Civic Alert",
+            text: `${headline}\n\nReport civic issues in your area:`,
+            url: reportUrl
+          });
+          return;
+        }
+
+        // Fallback 2: desktop browsers with no Web Share support — copy to clipboard
+        await navigator.clipboard.writeText(`${headline}\n\nReport civic issues in your area: ${reportUrl}`);
+        if (typeof showToast === 'function') {
+          showToast(dict.shareCopied, 'success');
+        } else {
+          alert(dict.shareCopied);
+        }
+
+      } catch (err) {
+        // AbortError fires when the user just closes the native share sheet —
+        // that's not a real failure, don't show an error toast for it.
+        if (err.name === 'AbortError') return;
+        console.error("Share failed:", err);
+        if (typeof showToast === 'function') {
+          showToast(dict.shareFailed, 'warning');
+        }
+      }
     }
 
     window.onload = function() {
