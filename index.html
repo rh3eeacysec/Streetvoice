@@ -9,11 +9,57 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <style>
-    body {
+    html, body {
       margin: 0;
       min-height: 100vh;
+    }
+    body {
       font-family: system-ui, -apple-system, sans-serif;
-      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      background: #0a0a0a; /* fallback color shown briefly before video paints / if video fails to load */
+    }
+
+    /* ==========================================================================
+       BACKGROUND VIDEO LAYER — shared across all 3 design generations.
+       Fixed + full-bleed behind everything; a per-theme tinted overlay sits
+       on top of it so text stays readable while keeping the video visible
+       and "translucent" (per your request) rather than fully obscured.
+       ========================================================================== */
+    #bg-video-layer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    /* Per-theme overlay tint: dark+warm for Modern, dark+purple for Y2K,
+       light for 90s so the bright editorial look doesn't go muddy over video. */
+    html[data-theme="modern"] #bg-video-overlay {
+      background: linear-gradient(rgba(10, 8, 8, 0.78), rgba(10, 8, 8, 0.9));
+    }
+    html[data-theme="y2k"] #bg-video-overlay {
+      background: linear-gradient(135deg, rgba(31, 5, 58, 0.82) 0%, rgba(11, 1, 23, 0.92) 100%);
+    }
+    html[data-theme="90s"] #bg-video-overlay {
+      background: rgba(252, 251, 247, 0.88);
     }
 
     @keyframes fadeInUp {
@@ -31,10 +77,6 @@
        GENERATION 1: MODERN CIVIC HERO (DEFAULT)
        ========================================== */
     html[data-theme="modern"] body {
-      background: linear-gradient(rgba(10, 10, 10, 0.8), rgba(10, 10, 10, 0.95)),
-                  url("https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1800&q=80");
-      background-size: cover;
-      background-position: center;
       color: #fff7f2;
     }
     html[data-theme="modern"] .glass {
@@ -54,7 +96,7 @@
     /* ==========================================
        GENERATION 2: Y2K HIGH-IMPACT (PURPLE & CYBER-YELLOW)
        ========================================== */
-    html[data-theme="y2k"] body { background: linear-gradient(135deg, #1f053a 0%, #0b0117 100%); color: #fef08a; }
+    html[data-theme="y2k"] body { color: #fef08a; }
     html[data-theme="y2k"] .glass {
       background: rgba(24, 3, 48, 0.85); border: 2px solid #eab308;
       box-shadow: 0 0 25px rgba(234, 179, 8, 0.25); border-radius: 24px !important; backdrop-filter: blur(20px);
@@ -73,7 +115,7 @@
     /* ==========================================
        GENERATION 3: 90s CIVIC NEWS GAZETTE (EDITORIAL LIGHT)
        ========================================== */
-    html[data-theme="90s"] body { background: #fcfbf7; color: #111111; }
+    html[data-theme="90s"] body { color: #111111; }
     html[data-theme="90s"] .glass { background: #ffffff; border: 3px double #222222; border-radius: 0px !important; }
     html[data-theme="90s"] .brand-text { color: #111111; font-family: serif; font-weight: 900; text-decoration: underline; }
     html[data-theme="90s"] .accent { background: #111111; color: #ffffff; border-radius: 0px !important; }
@@ -90,6 +132,20 @@
   </style>
 </head>
 <body class="overflow-x-hidden">
+
+  <!-- ==========================================================================
+       BACKGROUND VIDEO — plays behind all 3 design generations.
+       muted + playsinline + autoplay required for mobile browsers to allow
+       autoplay at all; loop keeps it running continuously.
+       The dimmed/tinted overlay (#bg-video-overlay, themed via CSS above)
+       sits on top of it so the video reads as translucent, not in-your-face.
+       ========================================================================== -->
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
 
   <!-- TOP BAR CONTROL CONFIGURATORS -->
   <header class="w-full max-w-6xl mx-auto pt-6 px-5 flex flex-wrap justify-end gap-3 animate-fade-up">
@@ -124,7 +180,7 @@
           </div>
 
           <p class="uppercase tracking-[0.2em] text-xs font-black brand-text mb-4" id="lbl-tagline">
-            AI-Multimodal Civic Reporting Engine
+            Report Local Problems. Let AI Handle the Rest.
           </p>
 
           <h2 class="text-4xl md:text-5xl lg:text-6xl font-black leading-[1.05] max-w-2xl tracking-tight" id="lbl-hero-headline">
@@ -139,16 +195,16 @@
         <!-- Metric Highlight Callout Blocks -->
         <div class="grid sm:grid-cols-3 gap-3 mt-10 animate-scale" style="animation-delay: 0.3s;">
           <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
-            <strong class="block text-xl brand-text" id="lbl-feat1-title">Multimodal</strong>
+            <strong class="block text-xl brand-text" id="lbl-feat1-title">🤖 Multimodal</strong>
             <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat1-desc">Zero-typing context generation.</span>
           </div>
           <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
-            <strong class="block text-xl brand-text" id="lbl-feat2-title">Bilingual</strong>
+            <strong class="block text-xl brand-text" id="lbl-feat2-title">🌐 Bilingual</strong>
             <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat2-desc">Native audio auto-translation.</span>
           </div>
           <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
-            <strong class="block text-xl brand-text" id="lbl-feat3-title">Incentivized</strong>
-            <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat3-desc">Earn rewards for verified reports.</span>
+            <strong class="block text-xl brand-text" id="lbl-feat3-title">🏆 StreetCredits</strong>
+            <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat3-desc">Earn rewards for verified reports and community participation.</span>
           </div>
         </div>
       </div>
@@ -158,14 +214,14 @@
         <div class="mb-2">
           <h2 class="text-2xl md:text-3xl font-black tracking-tight" id="lbl-portal-title">Citizen Portal</h2>
           <p class="opacity-75 mt-1 text-sm" id="lbl-portal-sub">
-            Initialize an identity sequence to log structural metrics across your local area.
+            Create Your StreetVoice Account
           </p>
         </div>
 
         <!-- Registration Card Container -->
         <div class="soft-card rounded-2xl p-5 shadow-sm">
           <h3 class="text-lg font-bold mb-1" id="lbl-reg-title">Generate Citizen Profile</h3>
-          <p class="text-xs opacity-60 mb-4" id="lbl-reg-sub">Provision a localized node token linked directly to your district boundary.</p>
+          <p class="text-xs opacity-60 mb-4" id="lbl-reg-sub">Join StreetVoice and start improving your community.</p>
 
           <form id="new-user-form" class="space-y-3">
             <input class="input" id="new-name" type="text" placeholder="Full Name" required />
@@ -185,10 +241,10 @@
           <p class="text-xs opacity-60 mb-4" id="lbl-login-sub">Input your established alphanumeric token string.</p>
 
           <form id="old-user-form" class="space-y-3">
-            <input class="input" id="old-id" type="text" placeholder="e.g., SV-MUM-RHEA-4821" required />
+            <input class="input" id="old-id" type="text" placeholder="e.g., CITIZEN-MUM-4821" required />
 
             <button class="w-full bg-white text-[#1d100c] btn-return rounded-xl py-3.5 font-black transition-all uppercase tracking-wider text-xs" type="submit" id="btn-login-submit">
-              Mount Core Session
+              Sign In
             </button>
           </form>
           <p id="old-user-message" class="text-sm mt-3"></p>
@@ -223,7 +279,7 @@
         placeholderName: "Full Name",
         placeholderCity: "Target Municipality / City",
         placeholderEmail: "Email Address (Optional)",
-        placeholderToken: "e.g., SV-MUM-RHEA-4821",
+        placeholderToken: "e.g., CITIZEN-MUM-4821",
         msgSuccess: "Success! Account Assigned: ",
         msgWelcomeBack: "Welcome back. Syncing profile metrics...",
         msgErrNotFound: "Identifier not found. Please review the key entry.",
@@ -252,7 +308,7 @@
         placeholderName: "आपका पूरा नाम",
         placeholderCity: "शहर / नगर पालिका",
         placeholderEmail: "ईमेल आईडी (वैकल्पिक)",
-        placeholderToken: "जैसे: SV-MUM-RHEA-4821",
+        placeholderToken: "जैसे: CITIZEN-MUM-4821",
         msgSuccess: "सफलता! नया अकाउंट आईडी: ",
         msgWelcomeBack: "स्वागत है। प्रोफाइल डेटा लोड हो रहा है...",
         msgErrNotFound: "पहचानकर्ता नहीं मिला। कृपया अपनी टोकन कुंजी दोबारा जांचें।",
@@ -304,10 +360,11 @@
     }
 
     function generateStreetVoiceId(name, city) {
-      const cleanName = name.trim().split(" ")[0].replace(/[^a-zA-Z]/g, "").toUpperCase();
       const cleanCity = city.trim().replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase();
       const random = Math.floor(1000 + Math.random() * 9000);
-      return `SV-${cleanCity || "CTY"}-${cleanName || "USER"}-${random}`;
+      // Civic-registry style ID instead of a generic "SV-" tech prefix —
+      // reads like a real municipal citizen registration number.
+      return `CITIZEN-${cleanCity || "MUM"}-${random}`;
     }
 
     function getInitials(name) {
@@ -429,6 +486,21 @@
       const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
       updatePageLanguage(savedLang);
     };
+
+    // ===== BACKGROUND VIDEO: graceful fallback if bg_index.mp4 fails to load =====
+    // (wrong filename, unsupported codec, browser blocking autoplay, etc.)
+    // Without this, a failed video load leaves only the fallback body color
+    // showing through a fully-opaque-looking overlay — which is fine, but we
+    // log it clearly so it's obvious during testing/demo prep if the video
+    // file isn't actually being found.
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load — check that the file sits next to index.html with that exact filename.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
   </script>
   <script src="cursor.js"></script>
 </body>
