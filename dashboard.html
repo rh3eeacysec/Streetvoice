@@ -9,7 +9,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="app-config.js"></script>
   <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
+  <script src="credits.js"></script>
+  <script src="toast.js"></script>
+  <script src="storage.js"></script>
   <style>
     body {
       margin: 0;
@@ -448,8 +455,8 @@
     let currentLanguage = 'en';
 
     const globalMockIncidents = [
-      { id: "SV-REP-104", category: "Roadways & Potholes", location: "Linking Road, near National College", desc: "Severe structural failure on primary asphalt layer. Deep potholes causing major multi-lane transit delays.", sourceLang: "Hinglish Audio Input ('Pothole bohot gehra hai, vehicles are damaging')", votes: 18, user: "SV-MUM-ROHAN-2289" },
-      { id: "SV-REP-105", category: "Electrical & Streetlights", location: "Goregaon East Hub Ext", desc: "High voltage sub-station box door is unlatched and wide open, exposing active electrical circuitry to heavy rainfall.", sourceLang: "Hindi Audio Input ('Bijli ka box khula pada hai, short circuit ho sakta hai')", votes: 31, user: "SV-MUM-PRIYA-4512" }
+      { id: "MUM-PH-2104", category: "Roadways & Potholes", location: "Linking Road, near National College", desc: "Severe structural failure on primary asphalt layer. Deep potholes causing major multi-lane transit delays.", sourceLang: "Hinglish Audio Input ('Pothole bohot gehra hai, vehicles are damaging')", votes: 18, user: "CITIZEN-MUM-2289" },
+      { id: "MUM-SL-2105", category: "Electrical & Streetlights", location: "Goregaon East Hub Ext", desc: "High voltage sub-station box door is unlatched and wide open, exposing active electrical circuitry to heavy rainfall.", sourceLang: "Hindi Audio Input ('Bijli ka box khula pada hai, short circuit ho sakta hai')", votes: 31, user: "CITIZEN-MUM-4512" }
     ];
 
     function setEra(eraName) {
@@ -486,7 +493,7 @@
 
       const currentUserId = localStorage.getItem("streetvoice_current_user");
       if (!currentUserId || !localStorage.getItem(`streetvoice_user_${currentUserId}`)) {
-        const defaultDevId = "SV-MUM-DEV-4000";
+        const defaultDevId = "CITIZEN-MUM-4000";
         const devUser = { id: defaultDevId, name: "Civic Innovator", initials: "CI", city: "Mumbai", email: "hackathon@node.internal", level: 3, streetCredits: 350, stats: { reported: 2, verified: 14 }, reports: [] };
         localStorage.setItem(`streetvoice_user_${defaultDevId}`, JSON.stringify(devUser));
         localStorage.setItem("streetvoice_current_user", defaultDevId);
@@ -592,24 +599,29 @@
 
       // Track that this incident is now verified by this user
       currentUser.votedIncidents.push(id);
-      
-      // Award credits and increment validation counts
       currentUser.stats.verified += 1;
-      currentUser.streetCredits += 10;
-      
-      // Save state to local browser cache
       localStorage.setItem(`streetvoice_user_${currentUser.id}`, JSON.stringify(currentUser));
       updateStatsPanel();
 
-      // Sync updated credentials and tracking array directly to Firebase Realtime Database
-      if (window.db) {
-        db.ref('users/' + currentUser.id).update({
-          name: currentUser.name,
-          city: currentUser.city,
-          streetCredits: currentUser.streetCredits,
-          stats: currentUser.stats,
-          votedIncidents: currentUser.votedIncidents
-        }).catch(err => console.error("Firebase user update failed:", err));
+      // ===== REAL AI-CALCULATED CREDITS via credits.js (Credit Allocator agent) =====
+      // Replaces the old flat +10. awardCredits() does its own Firebase
+      // users/{id} transaction for streetCredits + stats — so we only sync
+      // the votedIncidents array separately here, not streetCredits/stats
+      // again, to avoid two competing writes racing each other.
+      awardCredits(currentUser.id, 'verify', `Verified incident ${id}`)
+        .then(result => {
+          if (result) currentUser.streetCredits = result.newTotal;
+          localStorage.setItem(`streetvoice_user_${currentUser.id}`, JSON.stringify(currentUser));
+          updateStatsPanel();
+        });
+
+      if (window.db && typeof getAuthUid === 'function') {
+        getAuthUid().then(realUid => {
+          const firebaseKey = realUid || currentUser.id;
+          db.ref('users/' + firebaseKey).update({
+            votedIncidents: currentUser.votedIncidents
+          }).catch(err => console.error("Firebase votedIncidents update failed:", err));
+        });
       }
     }
 
@@ -618,7 +630,8 @@
        ========================================================================== */
     let selectedTriageImageBase64 = null;
     let selectedTriageImageMime = null;
-    const TRIAGE_API_URL = 'http://localhost:3000/api/analyze-image';
+    let selectedTriageImageFile = null; // raw File object, kept for Storage upload
+    const TRIAGE_API_URL = (window.API_BASE_URL || 'http://localhost:3000') + '/api/analyze-image';
 
     function handleTriageImageSelect(event) {
       const file = event.target.files[0];
@@ -634,9 +647,11 @@
       if (!file) {
         btn.disabled = true;
         btnText.textContent = "Select an image first";
+        selectedTriageImageFile = null;
         return;
       }
 
+      selectedTriageImageFile = file;
       selectedTriageImageMime = file.type || "image/jpeg";
       const reader = new FileReader();
       reader.onload = () => {
@@ -731,6 +746,21 @@
           async function commitReportToFirebase(lat, lng) {
             try {
               const newReportRef = db.ref('reports').push();
+              const ticketId = newReportRef.key;
+
+              // Upload the same image the user picked to Firebase Storage,
+              // alongside the Gemini Vision analysis we already ran on it.
+              // Doesn't block the report write if upload fails or Storage
+              // isn't configured — evidence is a bonus, not a hard requirement.
+              let evidenceUrl = null;
+              if (selectedTriageImageFile && typeof uploadEvidenceFile === 'function') {
+                evidenceUrl = await uploadEvidenceFile(selectedTriageImageFile, ticketId);
+              }
+
+              // Resolve the REAL auth.uid — DB rules require reports[id].user
+              // to equal the writer's actual auth.uid, not the display id.
+              const realUid = (typeof getAuthUid === 'function') ? await getAuthUid() : null;
+
               await newReportRef.set({
                 category: a.category,
                 location: currentUser ? currentUser.city.toUpperCase() : "MUMBAI",
@@ -739,14 +769,27 @@
                 desc: a.summary,
                 sourceLang: "Gemini Vision AI Triage",
                 votes: 0,
-                user: currentUser ? currentUser.id : "SV-ANON-NODE",
+                user: realUid || (currentUser ? currentUser.id : "CITIZEN-ANON-0000"), // real uid required by DB rules
+                displayUser: currentUser ? currentUser.id : "CITIZEN-ANON-0000",       // readable name for UI
                 timestamp: Date.now(),
                 severity: a.severity,
                 severityScore: a.severityScore,
                 suggestedDepartment: a.suggestedDepartment,
-                urgent: a.urgent
+                urgent: a.urgent,
+                evidenceUrl: evidenceUrl // null if upload skipped/failed — riskmap/feed should handle that gracefully
               });
               console.log("Telemetry node pushed to Firebase successfully with spatial vectors:", lat, lng);
+
+              // Keep the user profile linked to auth.uid too (creates
+              // users/{uid} if it doesn't exist yet, without clobbering
+              // streetCredits/stats — see auth.js).
+              if (currentUser && typeof linkLocalUserToAuth === 'function') {
+                linkLocalUserToAuth(currentUser).catch(err => console.error("Firebase user link failed:", err));
+              }
+
+              if (evidenceUrl && typeof showToast === 'function') {
+                showToast('Photo evidence saved to Firebase Storage.', 'success');
+              }
             } catch(ex) {
               console.error("Firebase write sequence failed:", ex);
             }
