@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="firebase-config.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -88,22 +89,47 @@
         "NIGHT-OWL-SEC": { city: "Nashik", streetCredits: 250, avatar: "pfp8.png", isMock: true }
       };
 
-      if (!window.db) {
-        console.warn("Firebase not initialized — showing mock leaderboard only.");
-        renderLeaderboardEngine(mockUsers);
-        return;
+      async function loadRealUsers() {
+        if (!window.db) {
+          console.warn("Firebase not initialized — showing mock leaderboard only.");
+          return null;
+        }
+
+        // Wait for anonymous auth to resolve — DB rules require auth != null
+        // to read users/. Without this wait, the read fires before sign-in
+        // completes and gets rejected, silently falling back to mock data.
+        if (window.authReady) {
+          await window.authReady;
+        }
+
+        try {
+          const snapshot = await db.ref('users').once('value');
+          return snapshot.val() || {};
+        } catch (err) {
+          console.error("Firebase leaderboard read failed:", err);
+          return null;
+        }
       }
 
       // ===== REAL DATA: merge actual Firebase citizens in with the mock "flavor" users =====
-      db.ref('users').once('value').then((snapshot) => {
-        const realUsers = snapshot.val() || {};
+      loadRealUsers().then((realUsers) => {
+        if (!realUsers) {
+          renderLeaderboardEngine(mockUsers);
+          return;
+        }
+
         const combined = { ...mockUsers };
-        Object.keys(realUsers).forEach(id => {
-          combined[id] = {
-            avatar: realUsers[id].avatar || "pfp1.png",
-            city: realUsers[id].city || "Unknown",
-            streetCredits: realUsers[id].streetCredits || 0,
-            ...realUsers[id],
+        Object.keys(realUsers).forEach(uid => {
+          const u = realUsers[uid];
+          // Show the readable displayId (e.g. "SV-MUM-DEV-4000") set by
+          // auth.js's linkLocalUserToAuth — NOT the raw uid key, which is a
+          // long random string that means nothing to a citizen viewing this.
+          const shownId = u.displayId || uid;
+          combined[shownId] = {
+            avatar: u.avatar || "pfp1.png",
+            city: u.city || "Unknown",
+            streetCredits: u.streetCredits || 0,
+            ...u,
             isMock: false
           };
         });
