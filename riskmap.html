@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="modern">
 <head>
-  <link rel="icon" type="image/png" href="/favicon.png">
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StreetVoice — RiskMap Node</title>
@@ -11,10 +9,13 @@
   
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="firebase-config.js"></script>
+  <script src="credits.js"></script>
+  <script src="toast.js"></script>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC9MmmXSx5WG0Me_tmrWTiPhBdDgD5lUUY&callback=initGoogleMap&loading=async" async defer></script>
 
   <style>
     /* ==========================================================================
@@ -63,7 +64,40 @@
       font-family: var(--font); 
       transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s; 
       overflow-x: hidden; 
+      position: relative;
     }
+
+    /* ==========================================================================
+       BACKGROUND VIDEO LAYER — same pattern as index.html/about.html.
+       ========================================================================== */
+    #bg-video-layer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: var(--bg);
+      opacity: 0.85;
+      transition: background 0.4s ease, opacity 0.4s ease;
+      pointer-events: none;
+    }
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
+
     .glass { 
       background: var(--surface); 
       border: 1px solid var(--border); 
@@ -75,13 +109,13 @@
     .glass-tilt { transform-style: preserve-3d; perspective: 1000px; }
     .glass-glow { background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255,255,255,0.05), transparent 70%); }
     
-    /* Hardware-accelerated presentation wrapper for custom tiled maps */
-    #leaflet-map {
+    /* Hardware-accelerated presentation wrapper for the Google Map canvas */
+    #google-map-canvas {
       width: 100%;
       height: 100%;
       background: #090d16;
     }
-    .leaflet-tile-container {
+    .gm-style {
       filter: var(--map-filter);
     }
 
@@ -93,6 +127,13 @@
   </style>
 </head>
 <body class="p-4 md:p-6 min-h-screen">
+
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
 
   <header class="w-full max-w-7xl mx-auto mb-6 flex flex-wrap justify-between items-center gap-3 animate-fade-up">
     <a href="dashboard.html" class="brand-text text-xl font-black flex items-center gap-2">
@@ -126,7 +167,7 @@
       </div>
       
       <div class="relative bg-black/40 border rounded-xl overflow-hidden aspect-[16/10]" style="border-color: var(--border); min-height: 400px; z-index: 10;">
-        <div id="leaflet-map"></div>
+        <div id="google-map-canvas"></div>
       </div>
     </div>
 
@@ -178,7 +219,8 @@
 
     let currentLanguage = 'en';
     let mapInstance = null;
-    let markersLayerGroup = null;
+    let activeMarkers = [];
+    let activeInfoWindow = null;
     let liveReportNodes = [];
 
     function setEra(eraName) {
@@ -202,39 +244,72 @@
       updateAnalyticsPanelText();
     }
 
-    function initLeafletMapSystem() {
-      // Initialize core canvas frame centered on the Mumbai geographic intersection
-      mapInstance = L.map('leaflet-map', {
-        zoomControl: true,
-        attributionControl: false
-      }).setView([19.0760, 72.8777], 12);
+    // Dark map style for the modern/y2k theme; default (light) style used for 90s
+    const DARK_MAP_STYLE = [
+      { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+      { featureType: "road", elementType: "geometry", stylers: [{ color: "#304a7d" }] },
+      { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
+      { featureType: "poi", elementType: "geometry", stylers: [{ color: "#283d6a" }] }
+    ];
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      }).addTo(mapInstance);
+    function initGoogleMap() {
+      // Guard against double-init: this function is called by the Google
+      // Maps script's own ?callback=initGoogleMap parameter. We do NOT also
+      // call it from window.onload anymore (that was a race condition —
+      // onload could fire before the Maps script finished loading, crashing
+      // with "google is not defined"). See window.onload below.
+      if (mapInstance) return;
 
-      markersLayerGroup = L.layerGroup().addTo(mapInstance);
+      const isLight = document.documentElement.getAttribute('data-theme') === '90s';
+
+      mapInstance = new google.maps.Map(document.getElementById('google-map-canvas'), {
+        center: { lat: 19.0760, lng: 72.8777 },
+        zoom: 12,
+        disableDefaultUI: false,
+        styles: isLight ? [] : DARK_MAP_STYLE
+      });
+
+      activeMarkers = [];
+      activeInfoWindow = null;
 
       // Bind socket logic onto live Firebase cluster
       listenToFirebaseCoordinates();
     }
 
-    function listenToFirebaseCoordinates() {
+    async function listenToFirebaseCoordinates() {
       if (!window.db) {
         console.warn("Database initialization failed. Check firebase-config.js mapping parameters.");
         return;
       }
 
+      // Wait for anonymous auth to resolve — DB rules require auth != null
+      // to read reports/. Without this, the listener attaches before
+      // sign-in completes and gets rejected by the security rules.
+      if (window.authReady) {
+        await window.authReady;
+      }
+
       db.ref('reports').on('value', (snapshot) => {
-        markersLayerGroup.clearLayers();
+        // Clear existing markers before redrawing
+        activeMarkers.forEach(m => m.setMap(null));
+        activeMarkers = [];
+        if (activeInfoWindow) activeInfoWindow.close();
+
         const data = snapshot.val() || {};
-        
+        const isFirstLoad = liveReportNodes.length === 0;
+
         liveReportNodes = Object.keys(data).map(key => ({
           id: key,
           ...data[key]
         }));
 
         updateAnalyticsPanelText();
+
+        if (isFirstLoad && liveReportNodes.length > 0 && typeof showToast === 'function') {
+          showToast(`${liveReportNodes.length} live reports loaded on the map.`, 'info');
+        }
 
         liveReportNodes.forEach((report) => {
           // Verify existence of valid spatial coordinates; default fallback values applied otherwise
@@ -246,27 +321,45 @@
           if (report.severity === 'MEDIUM') boundaryColor = '#eab308';
           if (report.severity === 'HIGH' || report.severity === 'CRITICAL') boundaryColor = '#ef4444';
 
-          const radialRadius = report.severity === 'CRITICAL' ? 16 : 10;
+          const radialRadius = report.severity === 'CRITICAL' ? 11 : 8;
 
-          const marker = L.circleMarker([latitude, longitude], {
-            radius: radialRadius,
-            fillColor: boundaryColor,
-            color: '#ffffff',
-            weight: 2,
-            fillOpacity: 0.75
+          const marker = new google.maps.Marker({
+            position: { lat: latitude, lng: longitude },
+            map: mapInstance,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: radialRadius,
+              fillColor: boundaryColor,
+              fillOpacity: 0.85,
+              strokeColor: '#ffffff',
+              strokeWeight: 2
+            },
+            title: `[${report.severity || 'LOW'}] ${report.category || ''}`
           });
 
-          // Embed standard terminal readout inside the Leaflet popup
+          // Real popup with report details, shown on click.
+          // Includes the evidence photo (if one was uploaded to Firebase
+          // Storage via dashboard.html's AI triage or report.html's upload field).
+          const evidenceImg = report.evidenceUrl
+            ? `<img src="${report.evidenceUrl}" style="width:100%; max-height:120px; object-fit:cover; border-radius:6px; margin-top:6px; display:block;" alt="Evidence photo" />`
+            : '';
+
           const contextCard = `
-            <div style="color:#0f172a; font-family:monospace; font-size:11px; line-height:1.4;">
-              <strong style="text-transform:uppercase; color:${boundaryColor === '#ffffff' ? '#0f172a' : boundaryColor}; font-size:12px;">[${report.severity || 'LOW'}] ${report.category}</strong><br/>
+            <div style="color:#0f172a; font-family:monospace; font-size:11px; line-height:1.4; max-width:220px;">
+              <strong style="text-transform:uppercase; color:${boundaryColor}; font-size:12px;">[${report.severity || 'LOW'}] ${report.category || ''}</strong><br/>
               <span style="opacity:0.7;">Loc: ${report.location || 'MUMBAI'}</span><br/>
-              <p style="margin-top:4px; font-style:italic; border-top:1px solid #ddd; padding-top:4px;">"${report.desc}"</p>
+              <p style="margin-top:4px; font-style:italic; border-top:1px solid #ddd; padding-top:4px;">"${report.desc || ''}"</p>
+              ${evidenceImg}
             </div>
           `;
 
-          marker.bindPopup(contextCard);
-          markersLayerGroup.addLayer(marker);
+          marker.addListener('click', () => {
+            if (activeInfoWindow) activeInfoWindow.close();
+            activeInfoWindow = new google.maps.InfoWindow({ content: contextCard });
+            activeInfoWindow.open(mapInstance, marker);
+          });
+
+          activeMarkers.push(marker);
         });
       }, (error) => {
         console.error("Geospatial Firebase extraction thread failed:", error);
@@ -299,7 +392,8 @@
 
     function recenterMapToDefault() {
       if (mapInstance) {
-        mapInstance.setView([19.0760, 72.8777], 12);
+        mapInstance.setCenter({ lat: 19.0760, lng: 72.8777 });
+        mapInstance.setZoom(12);
       }
     }
 
@@ -318,9 +412,38 @@
       
       const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
       updatePageLanguage(savedLang);
-      
-      initLeafletMapSystem();
+
+      // initGoogleMap() is called automatically by the Google Maps script's
+      // own ?callback=initGoogleMap parameter once it finishes loading — NOT
+      // called directly here, to avoid a race where onload fires before the
+      // Maps script is ready (which would crash with "google is not defined").
+      //
+      // Fallback: if the Maps script is blocked (ad blocker, network issue,
+      // bad API key) and the callback never fires within 8s, show a clear
+      // message instead of a silently blank map forever.
+      setTimeout(() => {
+        if (!mapInstance) {
+          const mapContainer = document.getElementById('google-map-canvas');
+          if (mapContainer) {
+            mapContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-family:monospace;font-size:12px;text-align:center;padding:20px;">⚠️ Google Maps failed to load.<br/>Check your API key restrictions and internet connection.</div>`;
+          }
+          if (typeof showToast === 'function') {
+            showToast('Google Maps failed to load — check console for details.', 'error');
+          }
+          console.error('initGoogleMap was never called — Maps script may be blocked, key invalid, or network unavailable.');
+        }
+      }, 8000);
     };
+
+    // ===== BACKGROUND VIDEO: graceful fallback if bg_index.mp4 fails to load =====
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
   </script>
   <script src="cursor.js"></script>
 </body>
