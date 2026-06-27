@@ -15,7 +15,9 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="firebase-config.js"></script>
+  <script src="auth.js"></script>
 
   <style>
     [data-theme="90s"] { 
@@ -97,7 +99,7 @@
           <img id="current-avatar-display" src="pfp1.png" alt="Node Avatar" class="w-full h-full object-cover">
         </div>
         <div>
-          <h2 id="node-id-title" class="text-xl font-bold uppercase">SV-DAD-GHOSTRIDER-3794</h2>
+          <h2 id="node-id-title" class="text-xl font-bold uppercase">CITIZEN-DAD-7401</h2>
           <p id="node-city-subtitle" class="text-xs font-mono text-muted">JURISDICTION: DADAR</p>
         </div>
       </div>
@@ -161,7 +163,7 @@
   <script src="cursor.js"></script>
   <script>
     let localSelectedAvatar = "pfp1.png";
-    let activeSessionUser = "SV-DAD-GHOSTRIDER-3794";
+    let activeSessionUser = "CITIZEN-DAD-7401";
 
     function setGlobalEra(era) {
       document.documentElement.setAttribute('data-theme', era);
@@ -201,8 +203,10 @@
       if (target) { target.style.opacity = "1"; }
     }
 
-    function initializeUserSession() {
-      activeSessionUser = localStorage.getItem("streetvoice_current_user") || "SV-DAD-GHOSTRIDER-3794";
+    let activeRealUid = null; // resolved once per page load — the real auth.uid Firebase rules check against
+
+    async function initializeUserSession() {
+      activeSessionUser = localStorage.getItem("streetvoice_current_user") || "CITIZEN-DAD-7401";
       document.getElementById("input-node-id").value = activeSessionUser;
       document.getElementById("node-id-title").textContent = activeSessionUser;
 
@@ -215,7 +219,26 @@
         return;
       }
 
-      db.ref(`users/${activeSessionUser}`).once('value').then(snap => {
+      // Resolve the REAL auth.uid — this is the key DB rules actually check
+      // (auth.uid == $uid), not the display id shown in the UI.
+      activeRealUid = (typeof getAuthUid === 'function') ? await getAuthUid() : null;
+      if (!activeRealUid) {
+        console.warn("Could not resolve auth.uid — Firebase reads/writes on this page may be rejected by security rules.");
+        return;
+      }
+
+      // Ensure users/{uid} exists and carries this session's display info.
+      if (typeof linkLocalUserToAuth === 'function') {
+        const localUser = {
+          id: activeSessionUser,
+          name: activeSessionUser,
+          city: localStorage.getItem("streetvoice_user_city") || "Dadar",
+          avatar: localStorage.getItem("streetvoice_user_avatar") || "pfp1.png"
+        };
+        await linkLocalUserToAuth(localUser);
+      }
+
+      db.ref(`users/${activeRealUid}`).once('value').then(snap => {
         const data = snap.val();
         if (data) {
           document.getElementById("input-node-city").value = data.city || "Dadar";
@@ -234,8 +257,10 @@
 
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
 
-      if (window.db) {
-        db.ref(`users/${activeSessionUser}`).update({ city: targetCity, avatar: localSelectedAvatar });
+      // Keyed by the real auth.uid (resolved during initializeUserSession),
+      // not the display id — required by DB rules (auth.uid == $uid).
+      if (window.db && activeRealUid) {
+        db.ref(`users/${activeRealUid}`).update({ city: targetCity, avatar: localSelectedAvatar });
       }
     }
 
@@ -282,10 +307,10 @@
       `).join('');
     }
 
-    function loadCreditsBadgesAndHistory(userId) {
-      if (!window.db) return;
+    function loadCreditsBadgesAndHistory(realUid) {
+      if (!window.db || !realUid) return;
 
-      db.ref(`users/${userId}`).on('value', (snap) => {
+      db.ref(`users/${realUid}`).on('value', (snap) => {
         const data = snap.val() || {};
         document.getElementById("credits-balance").textContent = (data.streetCredits || 0).toLocaleString();
         const stats = data.stats || { reported: 0, verified: 0 };
@@ -294,7 +319,10 @@
         renderBadges(stats);
       });
 
-      db.ref('reports').orderByChild('user').equalTo(userId).on('value', (snap) => {
+      // Reports are written with user = real auth.uid (see report.html /
+      // dashboard.html) — so this query must filter by the same uid, not
+      // the display id, or it'll silently return zero results.
+      db.ref('reports').orderByChild('user').equalTo(realUid).on('value', (snap) => {
         const data = snap.val() || {};
         const myReports = Object.keys(data)
           .map(key => ({ id: key, ...data[key] }))
@@ -306,11 +334,11 @@
       });
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       setGlobalEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
       buildAvatarSelectionGrid();
-      initializeUserSession();
-      loadCreditsBadgesAndHistory(activeSessionUser);
+      await initializeUserSession(); // resolves activeRealUid — must finish first
+      loadCreditsBadgesAndHistory(activeRealUid);
     });
   </script>
 </body>
