@@ -28,7 +28,7 @@ If she wants to push harder, she generates an awareness poster in two clicks and
 
 That's the loop StreetVoice was built to close: **report → understand → route → make visible → verify → resolve** — with AI doing real reasoning at almost every step, not just decorating a form.
 
-Built solo, for **Vibe2Ship Hackathon 2026**, against an assigned civic-issue-reporting problem statement — by a second-time hackathon builder who wanted to ship something that could plausibly survive contact with real use, not just a demo click-through.
+Built for **Vibe2Ship Hackathon 2026**, against an assigned civic-issue-reporting problem statement — by a hackathon builder who wanted to ship something that could plausibly survive contact with real use, not just a demo click-through.
 
 ---
 
