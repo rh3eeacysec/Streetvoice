@@ -208,7 +208,7 @@ Full feature breakdown, roadmap, and risk notes live in [`docs/PRD.md`](./docs/P
 
 ## 👩‍💻 About the Builder
 
-I'm a 19-year-old cybersecurity and digital forensics student,. StreetVoice was built solo, against an assigned civic-issue-reporting problem statement — not a problem I picked freely, but one I tried to take seriously rather than treat as a box to check.
+I'm a 19-year-old cybersecurity and digital forensics student,. StreetVoice was built against an assigned civic-issue-reporting problem statement — not a problem I picked freely, but one I tried to take seriously rather than treat as a box to check.
 
 My background is in security, not civic-tech or social impact work, and that shaped how I approached this: I spent real time on identity and access control (real Firebase Auth, locked database rules with deliberately scoped exceptions, not a default-open database with a public demo bolted on top) precisely because "make it secure later" is the kind of corner that's easy to cut under a deadline and expensive to fix after. A civic platform that's insecure isn't really civic infrastructure — it's a liability waiting for someone to find it.
 
