@@ -85,6 +85,16 @@ Photos and videos attached to reports upload to Firebase Storage in the backgrou
 
 ---
 
+# 🏗️ System Architecture
+
+StreetVoice follows a modular, cloud-native architecture that combines multimodal user input, a specialized multi-agent AI pipeline, Google Cloud services, and real-time community collaboration into a single civic reporting workflow.
+
+<p align="center">
+  <img src="Architecture_Diagram.png" alt="StreetVoice System Architecture" width="100%">
+</p>
+
+---
+
 ## 🏗️ Technology Stack Matrix
 
 | Layer | Technology | Function |
