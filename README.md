@@ -1,4 +1,5 @@
-# 📢 StreetVoice
+# 📢 StreetVoice -  Hyperlocal Problem Solver
+
 
 <p align="center">
 <img src="https://img.shields.io/badge/Hackathon-Vibe2Ship%202026-blue?style=for-the-badge" alt="Hackathon" />
