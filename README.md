@@ -32,9 +32,9 @@ Built for **Vibe2Ship Hackathon 2026**, against an assigned civic-issue-reportin
 
 ---
 
-## 🎬 Demo Media
+## 🎬 Media
 
-> 📹 Demo video — *add your link here before submission*
+
 >
 > 🌐 Live deployment — [*Launch the production web app*](https://streetvoice-116985470713.asia-south1.run.app)
 
