@@ -172,7 +172,7 @@
       <div class="glass rounded-2xl p-7 md:p-10 flex flex-col justify-between shadow-xl animate-fade-up" style="animation-delay: 0.1s;">
         <div>
           <div class="inline-flex items-center gap-3 mb-8">
-            <div class="w-12 h-12 rounded-full accent grid place-items-center text-lg font-black shadow-inner">SV</div>
+            <div class="w-12 h-12 rounded-full accent grid place-items-center text-2xl shadow-inner">📢</div>
             <div>
               <h1 class="text-3xl md:text-4xl font-black tracking-tight brand-text">StreetVoice</h1>
               <p class="text-sm opacity-75" id="lbl-sub-brand">Your community, amplified.</p>
@@ -202,8 +202,11 @@
             <strong class="block text-xl brand-text" id="lbl-feat2-title">🌐 Bilingual</strong>
             <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat2-desc">Native audio auto-translation.</span>
           </div>
-          <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1">
-            <strong class="block text-xl brand-text" id="lbl-feat3-title">🏆 StreetCredits</strong>
+          <div class="soft-card rounded-xl p-4 transition-all duration-300 hover:-translate-y-1 relative group">
+            <strong class="block text-xl brand-text" id="lbl-feat3-title">
+              🏆 StreetCredits
+              <span class="text-xs opacity-50 cursor-help" title="StreetCredits is a real, working gamification system built for this hackathon — your points and leaderboard rank are genuinely tracked. It currently has no monetary or government-redeemable value; it exists to encourage and recognize civic participation.">ⓘ</span>
+            </strong>
             <span class="text-[11px] opacity-75 block mt-1" id="lbl-feat3-desc">Earn rewards for verified reports and community participation.</span>
           </div>
         </div>
@@ -266,7 +269,7 @@
         feat1Desc: "Zero-typing context generation.",
         feat2Title: "Bilingual",
         feat2Desc: "Native audio auto-translation.",
-        feat3Title: "Incentivized",
+        feat3Title: "StreetCredits",
         feat3Desc: "Earn rewards for verified reports.",
         portalTitle: "Citizen Portal",
         portalSub: "Initialize an identity sequence to log structural metrics across your local area.",
