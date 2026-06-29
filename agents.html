@@ -14,6 +14,18 @@
   <script src="credits.js"></script>
   <script src="toast.js"></script>
   <style>
+    #bg-video-layer {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+      object-fit: cover; transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed; inset: 0; z-index: -1; background: var(--bg); opacity: 0.85;
+      transition: background 0.4s ease, opacity 0.4s ease; pointer-events: none;
+    }
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
     /* ==========================================================================
        THEME ENGINE ARCHITECTURE: ALIGNED WITH GLOBAL DESIGN MATRIX
        ========================================================================== */
@@ -140,9 +152,23 @@
       stroke-dashoffset: 2000;
       transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    .sv-nav-link {
+      display: block; padding: 10px 14px; font-size: 12px; font-weight: 700;
+      color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+    .sv-nav-link:last-child { border-bottom: none; }
+    .sv-nav-link:hover { background: rgba(255,255,255,0.08); }
   </style>
 </head>
 <body class="p-4 md:p-6 min-h-screen relative">
+
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
 
   <svg class="scroll-svg-canvas" id="matrix-canvas">
     <path id="bg-path-1" class="scroll-path" />
@@ -181,6 +207,26 @@
         <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
         <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
         <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+
+      <div class="relative" id="sv-nav-menu-wrapper">
+        <button onclick="document.getElementById('sv-nav-menu-dropdown').classList.toggle('hidden')"
+          class="glass px-3 py-2 flex items-center justify-center text-lg font-black shadow-md hover:opacity-80 transition"
+          style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);"
+          aria-label="Navigation menu">⋯</button>
+        <div id="sv-nav-menu-dropdown" class="hidden absolute right-0 mt-2 w-56 shadow-2xl z-50 overflow-hidden"
+          style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); backdrop-filter: blur(16px);">
+          <a href="index.html" class="sv-nav-link">🏠 Home</a>
+          <a href="report.html" class="sv-nav-link">📝 Report an Issue</a>
+          <a href="riskmap.html" class="sv-nav-link">🗺️ Risk Map</a>
+          <a href="dashboard.html" class="sv-nav-link">⚡ AI Quick Triage</a>
+          <a href="agents.html" class="sv-nav-link">🤖 AI Agents</a>
+          <a href="studio.html" class="sv-nav-link">🎨 Poster Studio</a>
+          <a href="leaderboard.html" class="sv-nav-link">🏆 Leaderboard</a>
+          <a href="profile.html" class="sv-nav-link">👤 Profile</a>
+          <a href="settings.html" class="sv-nav-link">⚙️ Settings</a>
+          <a href="about.html" class="sv-nav-link">ℹ️ About</a>
+        </div>
       </div>
     </div>
   </header>
@@ -632,6 +678,23 @@
       setTimeout(drawStaticBackgroundPaths, 400);
       loadReportPickerOptions();
     };
+
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
+
+    document.addEventListener('click', function (e) {
+      const wrapper = document.getElementById('sv-nav-menu-wrapper');
+      const dropdown = document.getElementById('sv-nav-menu-dropdown');
+      if (wrapper && dropdown && !wrapper.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
   </script>
 </body>
 </html>
