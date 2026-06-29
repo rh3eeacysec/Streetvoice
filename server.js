@@ -2,6 +2,11 @@ import express from 'express';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 const app = express();
@@ -521,4 +526,101 @@ If the transcript doesn't clearly describe a civic issue, set category to "Other
   }
 });
 
-app.listen(3000, () => console.log('Server active on port 3000'));
+/* ==========================================================================
+   GEMINI — PREDICTIVE INSIGHTS (Impact Dashboard)
+   Used by riskmap.html's expanded analytics panel. Takes a snapshot of REAL
+   report data (category, location, severity, timestamp) already pulled from
+   Firebase by the frontend, and asks Gemini to find genuine patterns —
+   trending categories, emerging hotspot wards, risk trajectory — rather than
+   a hardcoded or templated summary.
+   ========================================================================== */
+app.post('/api/predictive-insights', async (req, res) => {
+  const { reports } = req.body;
+
+  if (!Array.isArray(reports) || reports.length === 0) {
+    return res.status(400).json({ error: "No report data provided for analysis." });
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+  // Strip to only the fields needed for pattern analysis — keeps the prompt
+  // small/cheap and avoids sending anything unnecessary (no user IDs).
+  const dataSnapshot = reports.slice(0, 200).map(r => ({
+    category: r.category, location: r.location, severity: r.severity,
+    timestamp: r.timestamp
+  }));
+
+  const prompt = `You are the Predictive Insights agent for StreetVoice, a civic issue reporting platform. You are given a real snapshot of citizen-submitted infrastructure reports (category, location, severity, submission time).
+
+Report data (most recent ${dataSnapshot.length} reports):
+${JSON.stringify(dataSnapshot)}
+
+Analyze this REAL data — do not invent categories or locations that are not present in the data above. Identify genuine patterns: which category is most frequent, which location/area appears most often, whether severity appears to be trending up or down over the timestamps given, and one specific, actionable prediction a municipal planner could use.
+
+Return ONLY a raw JSON object (no markdown fences) in exactly this shape:
+{
+  "topCategory": "<most frequent category in the data, or 'Insufficient data' if too few reports>",
+  "topLocation": "<most frequently reported location/area in the data, or 'Insufficient data'>",
+  "trend": "<RISING|STABLE|FALLING|INSUFFICIENT_DATA — based on severity/volume over the timestamps given>",
+  "prediction": "<one specific, actionable sentence a municipal planner could act on, grounded only in the data provided>",
+  "confidence": "<HIGH, MEDIUM, or LOW based on how much data was available>"
+}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    });
+
+    const data = await response.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!rawText) {
+      console.error("Predictive insights returned no text:", JSON.stringify(data));
+      return res.status(500).json({ error: "Gemini returned no insight data." });
+    }
+
+    let insights;
+    try {
+      insights = JSON.parse(rawText);
+    } catch (parseErr) {
+      console.error("Could not parse predictive insights JSON, raw text was:", rawText);
+      insights = {
+        topCategory: "Unavailable", topLocation: "Unavailable",
+        trend: "INSUFFICIENT_DATA",
+        prediction: "Not enough structured data was available to generate a reliable prediction.",
+        confidence: "LOW"
+      };
+    }
+
+    res.json(insights);
+
+  } catch (err) {
+    console.error("Predictive insights request failed:", err);
+    res.status(500).json({ error: "Predictive insights failed. Is GEMINI_API_KEY set in .env?" });
+  }
+});
+
+// ===== SERVE THE BUILT FRONTEND (production) =====
+// After `npm run build`, Vite outputs static files into /dist. In production
+// (Cloud Run), this server serves those files directly so the whole app is
+// one deployment, one URL — no separate frontend hosting needed.
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Catch-all: any non-API route serves the frontend's index.html, letting
+// client-side navigation between pages keep working. Must come AFTER all
+// app.post('/api/...') routes above, or it would swallow API calls too.
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// Cloud Run injects its own PORT env var at runtime — hardcoding 3000 here
+// would make the deployed service fail to start. Locally (npm run dev:all),
+// process.env.PORT is unset, so it still falls back to 3000 as before.
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server active on port ${PORT}`));
