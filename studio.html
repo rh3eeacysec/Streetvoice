@@ -71,11 +71,38 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .animate-fade-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    #bg-video-layer {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+      object-fit: cover; transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed; inset: 0; z-index: -1; background: var(--bg); opacity: 0.85;
+      transition: background 0.4s ease, opacity 0.4s ease; pointer-events: none;
+    }
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
+    .sv-nav-link {
+      display: block; padding: 10px 14px; font-size: 12px; font-weight: 700;
+      color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+    .sv-nav-link:last-child { border-bottom: none; }
+    .sv-nav-link:hover { background: rgba(255,255,255,0.08); }
   </style>
 </head>
 <body class="p-4 md:p-6 min-h-screen">
 
-  <header class="w-full max-w-7xl mx-auto mb-6 flex flex-wrap justify-between items-center gap-3 animate-fade-up">
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
+
+  <header class="w-full max-w-7xl mx-auto mb-6 flex flex-wrap justify-between items-center gap-3 animate-fade-up relative z-30">
     <a href="index.html" class="brand-text text-xl font-black flex items-center gap-2">
       <span>← StreetVoice</span>
     </a>
@@ -92,6 +119,26 @@
         <button onclick="setEra('90s')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">📰 90s</button>
         <button onclick="setEra('y2k')" class="px-1.5 py-0.5 rounded hover:bg-black/5 transition">⚡ Y2K</button>
         <button onclick="setEra('modern')" class="px-1.5 py-0.5 rounded hover:bg-white/10 transition">✨ Modern</button>
+      </div>
+
+      <div class="relative" id="sv-nav-menu-wrapper">
+        <button onclick="document.getElementById('sv-nav-menu-dropdown').classList.toggle('hidden')"
+          class="glass px-3 py-2 flex items-center justify-center text-lg font-black shadow-md hover:opacity-80 transition"
+          style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);"
+          aria-label="Navigation menu">⋯</button>
+        <div id="sv-nav-menu-dropdown" class="hidden absolute right-0 mt-2 w-56 shadow-2xl overflow-hidden"
+          style="z-index: 100; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); backdrop-filter: blur(16px);">
+          <a href="index.html" class="sv-nav-link">🏠 Home</a>
+          <a href="report.html" class="sv-nav-link">📝 Report an Issue</a>
+          <a href="riskmap.html" class="sv-nav-link">🗺️ Risk Map</a>
+          <a href="dashboard.html" class="sv-nav-link">⚡ AI Quick Triage</a>
+          <a href="agents.html" class="sv-nav-link">🤖 AI Agents</a>
+          <a href="feed.html" class="sv-nav-link">📰 Feed</a>
+          <a href="leaderboard.html" class="sv-nav-link">🏆 Leaderboard</a>
+          <a href="profile.html" class="sv-nav-link">👤 Profile</a>
+          <a href="settings.html" class="sv-nav-link">⚙️ Settings</a>
+          <a href="about.html" class="sv-nav-link">ℹ️ About</a>
+        </div>
       </div>
     </div>
   </header>
@@ -145,36 +192,44 @@
     </div>
 
     <div class="flex justify-center items-center p-2 animate-fade-up" style="animation-delay: 0.2s;">
-      <div id="poster-canvas" class="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative">
-        <div id="poster-image-layer" class="w-full h-40 bg-cover bg-center transition-all" style="background-color: #1e293b; background-image: none;">
-          <div id="poster-image-loading" class="hidden w-full h-full flex items-center justify-center bg-black/40 text-[10px] font-mono text-white/70">
-            🎨 AI is illustrating your poster...
-          </div>
-        </div>
-        <div id="poster-color-band" class="p-6 text-white transition-colors" style="background: #ea580c;">
+      <div id="poster-canvas" class="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl relative" style="background: #fdf6e3;">
+
+        <!-- Top accent band: severity-colored, sets the alert tone -->
+        <div id="poster-color-band" class="px-6 pt-6 pb-8 text-white transition-colors relative" style="background: #ea580c;">
           <div class="flex justify-between items-center text-[10px] font-mono uppercase tracking-widest opacity-90">
-            <span>StreetVoice Civic Alert</span>
-            <span id="poster-severity-badge">—</span>
+            <span>📣 StreetVoice Civic Alert</span>
+            <span id="poster-severity-badge" class="px-2 py-0.5 rounded bg-black/20 font-bold">—</span>
           </div>
-          <div class="flex items-center gap-3 mt-4">
-            <span id="poster-icon" class="text-4xl">📣</span>
+          <div class="flex items-start gap-3 mt-4">
+            <span id="poster-icon" class="text-4xl leading-none">📣</span>
             <h2 id="canvas-slogan" class="text-xl font-black leading-tight">
               Fill in the details and generate a poster
             </h2>
           </div>
         </div>
-        <div class="p-6 text-white space-y-3" style="background: #1e293b;">
-          <p id="poster-subtext" class="text-sm opacity-90 leading-relaxed"></p>
-          <div class="grid grid-cols-2 gap-2 text-[10px] font-mono pt-2 border-t border-white/10">
-            <div class="opacity-70">📍 <span id="poster-location-display"></span></div>
-            <div class="opacity-70 text-right">🗂️ <span id="poster-category-display"></span></div>
+
+        <!-- Location pointer callout — overlaps the band/body seam like a map pin tag -->
+        <div class="relative -mt-4 flex justify-center">
+          <div id="poster-location-pointer" class="flex items-center gap-1.5 px-4 py-1.5 rounded-full shadow-lg text-[11px] font-black uppercase tracking-wide" style="background: #1e293b; color: #fdf6e3;">
+            <span>📍</span>
+            <span id="poster-location-display">Location</span>
           </div>
-          <div class="flex justify-between items-center pt-3 border-t border-white/10">
+        </div>
+
+        <!-- Body: butter-yellow background, dark text for strong contrast/readability -->
+        <div class="px-6 pt-5 pb-6 space-y-4" style="background: #fdf6e3; color: #1e1303;">
+          <p id="poster-subtext" class="text-sm leading-relaxed font-medium"></p>
+
+          <div class="flex items-center gap-2 text-[11px] font-bold pt-1">
+            <span class="px-2.5 py-1 rounded-md" style="background: #1e1303; color: #fdf6e3;" id="poster-category-display">Category</span>
+          </div>
+
+          <div class="flex justify-between items-end pt-3 border-t-2 border-dashed" style="border-color: #1e130330;">
             <div>
-              <div id="poster-hashtag" class="text-sky-400 font-bold text-sm"></div>
-              <p id="canvas-context-sub" class="text-[9px] opacity-50 font-mono mt-1"></p>
+              <div id="poster-hashtag" class="font-black text-base" style="color: #c2410c;"></div>
+              <p id="canvas-context-sub" class="text-[9px] opacity-60 font-mono mt-1"></p>
             </div>
-            <img id="poster-qr" class="w-16 h-16 rounded bg-white p-1 hidden" src="" alt="QR code" />
+            <img id="poster-qr" class="w-16 h-16 rounded bg-white p-1 hidden border-2" style="border-color: #1e1303;" src="" alt="QR code" />
           </div>
         </div>
       </div>
@@ -186,16 +241,12 @@
       en: {
         canvasProcessing: "⚡ ENGINE CALL: Processing objective bulletin text...",
         canvasErr: "[ERROR]: Core matrix request timeout configuration exception.",
-        imageGenerating: "🎨 AI is illustrating your poster...",
-        imageErr: "AI artwork unavailable — showing text-only poster.",
         shareCopied: "Link copied! Paste it anywhere to share.",
         shareFailed: "Could not share — try the download button instead."
       },
       hi: {
         canvasProcessing: "⚡ एआई इंजन: आधिकारिक सूचना पाठ तैयार किया जा रहा है...",
         canvasErr: "[त्रुटि]: सर्वर रिस्पांस कनेक्शन विफल रहा।",
-        imageGenerating: "🎨 एआई आपका पोस्टर बना रहा है...",
-        imageErr: "एआई इमेज उपलब्ध नहीं — सिर्फ टेक्स्ट पोस्टर दिखाया जा रहा है।",
         shareCopied: "लिंक कॉपी हो गया! इसे कहीं भी साझा करें।",
         shareFailed: "साझा नहीं हो सका — डाउनलोड बटन आज़माएं।"
       }
@@ -238,29 +289,16 @@
       }
 
       document.getElementById("canvas-slogan").textContent = dict.canvasProcessing;
-      document.getElementById("poster-image-loading").classList.remove("hidden");
-      document.getElementById("poster-image-loading").textContent = dict.imageGenerating;
+      document.getElementById("poster-canvas").classList.add("opacity-60");
       btn.disabled = true;
 
-      // ===== Fire both calls in parallel: text content + AI illustration =====
-      // Run together (not sequentially) so the wait feels like one step, not two.
-      const textPromise = fetch(`${apiBase}/api/generate-poster`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, location, desc, tone })
-      });
-
-      const imagePromise = fetch(`${apiBase}/api/generate-poster-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, location, desc, tone })
-      }).catch(err => {
-        console.warn("Poster image generation request failed:", err);
-        return null;
-      });
-
       try {
-        const response = await textPromise;
+        const response = await fetch(`${apiBase}/api/generate-poster`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ category, location, desc, tone })
+        });
+
         if (!response.ok) {
           throw new Error(`Server responded ${response.status}`);
         }
@@ -273,7 +311,7 @@
         document.getElementById("canvas-slogan").textContent = poster.headline;
         document.getElementById("poster-subtext").textContent = poster.subtext;
         document.getElementById("poster-location-display").textContent = location || "Unspecified";
-        document.getElementById("poster-category-display").textContent = category;
+        document.getElementById("poster-category-display").textContent = `🗂️ ${category}`;
         document.getElementById("poster-hashtag").textContent = poster.hashtag;
         document.getElementById("canvas-context-sub").textContent = `Ref: STUDIO-${Date.now().toString().slice(-6)}`;
 
@@ -286,30 +324,11 @@
 
         document.getElementById("action-buttons-row").classList.remove("hidden");
 
-        // ===== Handle the AI illustration result (whenever it lands) =====
-        const imgRes = await imagePromise;
-        const imageLoadingEl = document.getElementById("poster-image-loading");
-        const imageLayer = document.getElementById("poster-image-layer");
-
-        if (imgRes && imgRes.ok) {
-          const imgData = await imgRes.json();
-          if (imgData.imageDataUrl) {
-            imageLayer.style.backgroundImage = `url('${imgData.imageDataUrl}')`;
-            imageLoadingEl.classList.add("hidden");
-          } else {
-            imageLoadingEl.textContent = dict.imageErr;
-            setTimeout(() => imageLoadingEl.classList.add("hidden"), 2500);
-          }
-        } else {
-          imageLoadingEl.textContent = dict.imageErr;
-          setTimeout(() => imageLoadingEl.classList.add("hidden"), 2500);
-        }
-
       } catch (err) {
         console.error("Studio Agent request failed:", err);
         document.getElementById("canvas-slogan").textContent = `⚠️ ${dict.canvasErr} (Is server.js running on port 3000?)`;
-        document.getElementById("poster-image-loading").classList.add("hidden");
       } finally {
+        document.getElementById("poster-canvas").classList.remove("opacity-60");
         btn.disabled = false;
         btn.textContent = "Generate Notice via Studio Agent";
       }
@@ -396,6 +415,23 @@
       const savedLang = localStorage.getItem('streetvoice_lang') || 'en';
       updatePageLanguage(savedLang);
     };
+
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
+
+    document.addEventListener('click', function (e) {
+      const wrapper = document.getElementById('sv-nav-menu-wrapper');
+      const dropdown = document.getElementById('sv-nav-menu-dropdown');
+      if (wrapper && dropdown && !wrapper.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
   </script>
 </body>
 </html>
