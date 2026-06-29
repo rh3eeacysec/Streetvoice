@@ -25,5 +25,3 @@ dist-ssr
 .env
 config.js
 
-# Database Configurations & Credentials
-firebase-config.js
