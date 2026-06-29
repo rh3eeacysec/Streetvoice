@@ -63,9 +63,36 @@
     .nav-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); border-radius: 8px; }
     .nav-btn:hover { background: var(--accent); color: var(--btn-text); }
     .tooltip-box { background: var(--bg); color: var(--text); border: 1px solid var(--border); font-size: 10px; }
+
+    #bg-video-layer {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+      object-fit: cover; transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed; inset: 0; z-index: -1; background: var(--bg); opacity: 0.85;
+      transition: background 0.4s ease, opacity 0.4s ease; pointer-events: none;
+    }
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
+    .sv-nav-link {
+      display: block; padding: 10px 14px; font-size: 12px; font-weight: 700;
+      color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+    .sv-nav-link:last-child { border-bottom: none; }
+    .sv-nav-link:hover { background: rgba(255,255,255,0.08); }
   </style>
 </head>
 <body class="p-4 md:p-6 min-h-screen flex flex-col justify-between">
+
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
 
   <header class="w-full max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
     <div class="flex items-center gap-3">
@@ -96,6 +123,24 @@
         <button onclick="changePageLanguage('en')" class="hover:underline p-1">EN</button>
         <span class="opacity-40 p-1">|</span>
         <button onclick="changePageLanguage('hi')" class="hover:underline p-1">हिं</button>
+      </div>
+
+      <div class="relative" id="sv-nav-menu-wrapper">
+        <button onclick="document.getElementById('sv-nav-menu-dropdown').classList.toggle('hidden')"
+          class="nav-btn w-9 h-9 flex items-center justify-center text-sm font-black" aria-label="Navigation menu">⋯</button>
+        <div id="sv-nav-menu-dropdown" class="hidden absolute right-0 mt-2 w-56 shadow-2xl z-50 overflow-hidden glass">
+          <a href="index.html" class="sv-nav-link">🏠 Home</a>
+          <a href="report.html" class="sv-nav-link">📝 Report an Issue</a>
+          <a href="riskmap.html" class="sv-nav-link">🗺️ Risk Map</a>
+          <a href="dashboard.html" class="sv-nav-link">⚡ AI Quick Triage</a>
+          <a href="agents.html" class="sv-nav-link">🤖 AI Agents</a>
+          <a href="studio.html" class="sv-nav-link">🎨 Poster Studio</a>
+          <a href="feed.html" class="sv-nav-link">📰 Feed</a>
+          <a href="leaderboard.html" class="sv-nav-link">🏆 Leaderboard</a>
+          <a href="profile.html" class="sv-nav-link">👤 Profile</a>
+          <a href="settings.html" class="sv-nav-link">⚙️ Settings</a>
+          <a href="about.html" class="sv-nav-link">ℹ️ About</a>
+        </div>
       </div>
     </div>
   </header>
@@ -386,8 +431,8 @@
         document.getElementById("poster-hashtag").textContent = poster.hashtag;
         document.getElementById("poster-ticket-id").textContent = ticketId;
 
-        // Real QR code (free public QR image API, no key needed) linking to the live feed
-        const reportUrl = `${window.location.origin}/feed.html?ref=${ticketId}`;
+        // Real QR code (free public QR image API, no key needed) linking to the live map
+        const reportUrl = `${window.location.origin}/riskmap.html`;
         document.getElementById("poster-qr").src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(reportUrl)}`;
 
         section.classList.remove("hidden");
@@ -476,23 +521,51 @@
         logs.scrollTop = logs.scrollHeight;
       }
 
-      // ===== EVIDENCE UPLOAD (optional) — same file picker as the form field =====
-      let evidenceUrl = null;
+      // ===== EVIDENCE UPLOAD (optional) — NON-BLOCKING =====
+      // Previously this `await`-ed the upload before doing anything else,
+      // which meant the whole report + AI pipeline sat frozen behind a slow
+      // mobile photo upload (often several real seconds). Now: the report
+      // submits immediately with evidenceUrl null, and the photo attaches
+      // itself via a background update() once the upload actually finishes —
+      // the user sees their report, credits, and AI results instantly either way.
       const evidenceInput = document.getElementById("report-evidence-input");
       const evidenceFile = evidenceInput && evidenceInput.files[0];
+      const evidenceStatus = document.getElementById("evidence-upload-status");
+
       if (evidenceFile && typeof uploadEvidenceFile === 'function') {
-        const evidenceStatus = document.getElementById("evidence-upload-status");
-        if (evidenceStatus) evidenceStatus.textContent = "📤 Uploading evidence to Firebase Storage...";
-        logs.innerHTML += `<div class="text-sky-400">> Uploading evidence file...</div>`;
+        if (evidenceStatus) evidenceStatus.textContent = "📤 Uploading evidence in the background...";
+        logs.innerHTML += `<div class="text-sky-400">> Evidence uploading in background (report continues immediately)...</div>`;
         logs.scrollTop = logs.scrollHeight;
 
-        evidenceUrl = await uploadEvidenceFile(evidenceFile, ticketId);
+        // Fire-and-forget: do NOT await this here. It resolves later and
+        // patches the already-submitted report once the upload completes.
+        uploadEvidenceFile(evidenceFile, ticketId).then((uploadedUrl) => {
+          if (evidenceStatus) {
+            evidenceStatus.textContent = uploadedUrl
+              ? "✅ Evidence attached to your report."
+              : "⚠️ Evidence upload failed — report was still submitted successfully.";
+          }
+          if (uploadedUrl && window.db) {
+            db.ref(`reports/${ticketId}`).update({ evidenceUrl: uploadedUrl })
+              .then(() => {
+                if (typeof showToast === 'function') showToast('Evidence photo attached to your report.', 'success');
+              })
+              .catch(err => console.error("Background evidence attach failed:", err));
 
-        if (evidenceStatus) {
-          evidenceStatus.textContent = evidenceUrl
-            ? "✅ Evidence uploaded successfully."
-            : "⚠️ Evidence upload failed — report will still be submitted.";
-        }
+            // Bonus credits for attaching evidence — awarded here, once the
+            // upload has genuinely succeeded, not assumed at submit time.
+            awardCredits(currentUser.id, 'evidence', `Uploaded evidence for ${ticketId}`)
+              .then(result => {
+                if (result) {
+                  currentUser.streetCredits = result.newTotal;
+                  localStorage.setItem(`streetvoice_user_${currentUser.id}`, JSON.stringify(currentUser));
+                }
+              });
+          }
+        }).catch(err => {
+          console.error("Background evidence upload failed:", err);
+          if (evidenceStatus) evidenceStatus.textContent = "⚠️ Evidence upload failed — report was still submitted successfully.";
+        });
       }
 
       const generatedPayload = {
@@ -501,7 +574,8 @@
         sourceLang: `Manual Pipeline Entry (${activeLang.toUpperCase()})`, votes: 1,
         user: realUid || currentUser.id, // real auth.uid required by DB rules; falls back to display id if auth somehow isn't ready
         displayUser: currentUser.id,     // readable name for UI display (feed.html, riskmap.html info windows, etc)
-        evidenceUrl: evidenceUrl
+        evidenceUrl: null,               // starts null — patched in by the background upload above once it completes, if a file was attached
+        status: "open"                  // open | in_progress | resolved — community-updatable, see riskmap.html
       };
 
       currentUser.reports.unshift(generatedPayload);
@@ -512,16 +586,8 @@
       // Replaces the old flat +25 with a context-aware amount, syncs to
       // Firebase users/{id}, and fires a toast automatically.
       awardCredits(currentUser.id, 'report', `${catText} at ${location}: ${desc}`)
-        .then(async result => {
+        .then(result => {
           if (result) currentUser.streetCredits = result.newTotal;
-
-          // Bonus credits for attaching evidence — separate award so the
-          // "report" and "evidence" actions each show their own toast.
-          if (evidenceUrl) {
-            const evidenceResult = await awardCredits(currentUser.id, 'evidence', `Uploaded evidence for ${ticketId}`);
-            if (evidenceResult) currentUser.streetCredits = evidenceResult.newTotal;
-          }
-
           localStorage.setItem(`streetvoice_user_${currentUser.id}`, JSON.stringify(currentUser));
         });
 
@@ -625,6 +691,23 @@
       
       changePageLanguage(localStorage.getItem('streetvoice_lang') || 'en');
     }
+
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
+
+    document.addEventListener('click', function (e) {
+      const wrapper = document.getElementById('sv-nav-menu-wrapper');
+      const dropdown = document.getElementById('sv-nav-menu-dropdown');
+      if (wrapper && dropdown && !wrapper.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
   </script>
 </body>
 </html>
