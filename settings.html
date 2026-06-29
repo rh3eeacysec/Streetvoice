@@ -56,14 +56,60 @@
       transition: background 0.4s ease, border-color 0.4s ease;
     }
     .brand-text { color: var(--brand-color); }
+
+    #bg-video-layer {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+      object-fit: cover; transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed; inset: 0; z-index: -1; background: var(--bg); opacity: 0.85;
+      transition: background 0.4s ease, opacity 0.4s ease; pointer-events: none;
+    }
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
+    .sv-nav-link {
+      display: block; padding: 10px 14px; font-size: 12px; font-weight: 700;
+      color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+    .sv-nav-link:last-child { border-bottom: none; }
+    .sv-nav-link:hover { background: rgba(255,255,255,0.08); }
   </style>
 </head>
 <body class="p-4 md:p-12 min-h-screen flex flex-col justify-center items-center">
 
-  <header class="w-full max-w-3xl mb-6">
-    <a href="#" class="brand-text text-sm font-bold flex items-center gap-2 hover:opacity-80 transition">
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
+
+  <header class="w-full max-w-3xl mb-6 flex justify-between items-center">
+    <a href="index.html" class="brand-text text-sm font-bold flex items-center gap-2 hover:opacity-80 transition">
       <span>← Return to Live Pipeline Monitor</span>
     </a>
+    <div class="relative" id="sv-nav-menu-wrapper">
+      <button onclick="document.getElementById('sv-nav-menu-dropdown').classList.toggle('hidden')"
+        class="glass px-3 py-1.5 flex items-center justify-center text-base font-black shadow-sm hover:opacity-80 transition"
+        style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);"
+        aria-label="Navigation menu">⋯</button>
+      <div id="sv-nav-menu-dropdown" class="hidden absolute right-0 mt-2 w-56 shadow-2xl z-50 overflow-hidden"
+        style="border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); backdrop-filter: blur(16px);">
+        <a href="index.html" class="sv-nav-link">🏠 Home</a>
+        <a href="report.html" class="sv-nav-link">📝 Report an Issue</a>
+        <a href="riskmap.html" class="sv-nav-link">🗺️ Risk Map</a>
+        <a href="dashboard.html" class="sv-nav-link">⚡ AI Quick Triage</a>
+        <a href="agents.html" class="sv-nav-link">🤖 AI Agents</a>
+        <a href="studio.html" class="sv-nav-link">🎨 Poster Studio</a>
+        <a href="feed.html" class="sv-nav-link">📰 Feed</a>
+        <a href="leaderboard.html" class="sv-nav-link">🏆 Leaderboard</a>
+        <a href="profile.html" class="sv-nav-link">👤 Profile</a>
+        <a href="about.html" class="sv-nav-link">ℹ️ About</a>
+      </div>
+    </div>
   </header>
 
   <main class="w-full max-w-3xl glass p-6 md:p-8 shadow-2xl">
@@ -119,6 +165,73 @@
 
       </div>
 
+      <div class="border-t border-white/5 pt-6">
+        <h3 class="text-sm font-black uppercase tracking-wider mb-4 brand-text">Frequently Asked Questions</h3>
+        <div class="space-y-3" id="faq-list">
+
+          <details class="group bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+            <summary class="cursor-pointer list-none p-4 flex justify-between items-center font-bold text-sm">
+              <span>Is StreetCredits real money, or redeemable for anything?</span>
+              <span class="opacity-50 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p class="px-4 pb-4 text-xs opacity-70 leading-relaxed">
+              StreetCredits is a genuinely working point and leaderboard system — your activity is tracked for real. But it currently has no monetary value and isn't redeemable for anything from a government body or third party. It exists to recognize and encourage civic participation, not as a payment or rewards-redemption system.
+            </p>
+          </details>
+
+          <details class="group bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+            <summary class="cursor-pointer list-none p-4 flex justify-between items-center font-bold text-sm">
+              <span>Do I need to create an account or log in?</span>
+              <span class="opacity-50 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p class="px-4 pb-4 text-xs opacity-70 leading-relaxed">
+              No. You're automatically given an anonymous identity the moment you open the app — no email, password, or signup form required. Your reports and credits are tied to that anonymous session.
+            </p>
+          </details>
+
+          <details class="group bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+            <summary class="cursor-pointer list-none p-4 flex justify-between items-center font-bold text-sm">
+              <span>What languages does voice reporting actually support?</span>
+              <span class="opacity-50 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p class="px-4 pb-4 text-xs opacity-70 leading-relaxed">
+              English and Hindi, selected via a toggle before you speak. Browser voice recognition technology can't reliably auto-detect which language you're speaking, so you pick first — the AI still cleans up and understands mixed Hinglish speech either way.
+            </p>
+          </details>
+
+          <details class="group bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+            <summary class="cursor-pointer list-none p-4 flex justify-between items-center font-bold text-sm">
+              <span>Why doesn't the voice button work in my browser?</span>
+              <span class="opacity-50 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p class="px-4 pb-4 text-xs opacity-70 leading-relaxed">
+              Voice input relies on a browser feature currently supported in Chrome and Edge, but not Firefox or Safari. If you're on an unsupported browser, the button will say so directly rather than failing silently — you can still type your report manually.
+            </p>
+          </details>
+
+          <details class="group bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+            <summary class="cursor-pointer list-none p-4 flex justify-between items-center font-bold text-sm">
+              <span>Are the awareness posters real AI-generated images?</span>
+              <span class="opacity-50 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p class="px-4 pb-4 text-xs opacity-70 leading-relaxed">
+              The poster's headline, color palette, severity rating, and hashtag are generated by a real Gemini AI call. The visual layout itself is a designed template, not AI-generated artwork — we're being upfront about that distinction.
+            </p>
+          </details>
+
+          <details class="group bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+            <summary class="cursor-pointer list-none p-4 flex justify-between items-center font-bold text-sm">
+              <span>Is my reported data public, and is it secure?</span>
+              <span class="opacity-50 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p class="px-4 pb-4 text-xs opacity-70 leading-relaxed">
+              Reports are intentionally public — that's what makes the map and community verification useful. Access is gated behind real authentication (you can't read or write data without a valid session), and you can only modify your own profile and your own reports, not anyone else's.
+            </p>
+          </details>
+
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -139,6 +252,23 @@
         dropdown.value = activeTheme;
       }
     };
+
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
+
+    document.addEventListener('click', function (e) {
+      const wrapper = document.getElementById('sv-nav-menu-wrapper');
+      const dropdown2 = document.getElementById('sv-nav-menu-dropdown');
+      if (wrapper && dropdown2 && !wrapper.contains(e.target)) {
+        dropdown2.classList.add('hidden');
+      }
+    });
   </script>
   <script src="cursor.js"></script>
 </body>
