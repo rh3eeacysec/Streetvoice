@@ -36,7 +36,7 @@ Built for **Vibe2Ship Hackathon 2026**, against an assigned civic-issue-reportin
 
 > 📹 Demo video — *add your link here before submission*
 >
-> 🌐 Live deployment — *add your Cloud Run URL here after deploying*
+> 🌐 Live deployment — [*Launch the production web app*](https://streetvoice-116985470713.asia-south1.run.app)
 
 ---
 
