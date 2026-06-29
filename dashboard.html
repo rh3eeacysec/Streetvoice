@@ -184,7 +184,7 @@
   <!-- NAVIGATION -->
   <header class="w-full max-w-7xl mx-auto mb-4 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-up">
     <div class="flex items-center gap-3">
-      <div id="user-avatar" class="w-10 h-10 rounded-full accent grid place-items-center font-black">SV</div>
+      <div id="user-avatar" class="w-10 h-10 rounded-full accent grid place-items-center text-lg">📢</div>
       <div>
         <h1 class="text-xl font-black brand-text" id="welcome-title">StreetVoice Workspace</h1>
         <p class="text-xs opacity-75" id="user-meta">Loading node credentials...</p>
@@ -193,6 +193,22 @@
     
     <div class="flex flex-wrap items-center gap-3">
       <div class="glass px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+        <div class="relative group">
+          <a href="report.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">📝</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-report">Report an Issue</div>
+        </div>
+        <div class="relative group">
+          <a href="riskmap.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">🗺️</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-riskmap">Live RiskMap</div>
+        </div>
+        <div class="relative group">
+          <a href="agents.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">🤖</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-agents">AI Agent Orchestrator</div>
+        </div>
+        <div class="relative group">
+          <a href="studio.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">🎨</a>
+          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-studio">Poster Studio</div>
+        </div>
         <div class="relative group">
           <a href="profile.html" class="nav-btn w-9 h-9 flex items-center justify-center rounded-lg transition-all text-sm">👤</a>
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 whitespace-nowrap tooltip-box text-[10px] font-bold px-2 py-1 rounded shadow-md pointer-events-none" data-label="tooltip-profile">User Profile Node</div>
@@ -776,7 +792,8 @@
                 severityScore: a.severityScore,
                 suggestedDepartment: a.suggestedDepartment,
                 urgent: a.urgent,
-                evidenceUrl: evidenceUrl // null if upload skipped/failed — riskmap/feed should handle that gracefully
+                evidenceUrl: evidenceUrl, // null if upload skipped/failed — riskmap/feed should handle that gracefully
+                status: "open"            // open | in_progress | resolved — community-updatable, see riskmap.html
               });
               console.log("Telemetry node pushed to Firebase successfully with spatial vectors:", lat, lng);
 
