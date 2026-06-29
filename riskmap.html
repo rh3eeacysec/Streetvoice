@@ -11,6 +11,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="app-config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="credits.js"></script>
   <script src="toast.js"></script>
@@ -187,6 +188,34 @@
             <p class="opacity-80 font-mono" id="lbl-stat2-desc">Awaiting calculated risk factors...</p>
           </div>
         </div>
+
+        <!-- ===== IMPACT DASHBOARD / PREDICTIVE INSIGHTS ===== -->
+        <div class="space-y-2 pt-2 border-t" style="border-color: var(--border);">
+          <h4 class="text-xs font-black uppercase tracking-wider opacity-70 pt-2" id="lbl-impact-title">📊 Impact Dashboard</h4>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2.5 rounded-lg bg-white/5 border text-center" style="border-color: var(--border); border-radius: var(--radius);">
+              <p class="text-[9px] uppercase opacity-60 font-bold" id="lbl-impact-top-category">Top Category</p>
+              <p class="font-black text-xs mt-1" id="val-top-category">—</p>
+            </div>
+            <div class="p-2.5 rounded-lg bg-white/5 border text-center" style="border-color: var(--border); border-radius: var(--radius);">
+              <p class="text-[9px] uppercase opacity-60 font-bold" id="lbl-impact-hotspot">Top Hotspot</p>
+              <p class="font-black text-xs mt-1" id="val-top-hotspot">—</p>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg border" style="border-color: var(--border); border-radius: var(--radius); background: rgba(56,189,248,0.06);">
+            <div class="flex items-center justify-between mb-1">
+              <strong class="text-[10px] uppercase tracking-wider opacity-70" id="lbl-prediction-title">🔮 AI Prediction</strong>
+              <span id="val-trend-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded" style="background: rgba(255,255,255,0.1);">—</span>
+            </div>
+            <p class="text-xs leading-relaxed opacity-90" id="val-prediction-text">Generating prediction from live report data...</p>
+          </div>
+
+          <button onclick="loadPredictiveInsights()" class="w-full text-[10px] py-2 rounded-lg border font-bold uppercase tracking-wider transition hover:bg-white/5" style="border-color: var(--border); border-radius: var(--radius);" id="btn-refresh-insights">
+            🔄 Refresh AI Insight
+          </button>
+        </div>
       </div>
 
       <button onclick="recenterMapToDefault()" class="w-full accent py-3.5 rounded-xl font-black uppercase tracking-wider text-xs transition-all shadow-md" style="border-radius: var(--radius);">
@@ -344,12 +373,33 @@
             ? `<img src="${report.evidenceUrl}" style="width:100%; max-height:120px; object-fit:cover; border-radius:6px; margin-top:6px; display:block;" alt="Evidence photo" />`
             : '';
 
+          // Status defaults to "open" for reports created before this field
+          // existed — never breaks on old data, just treats it as unresolved.
+          const status = report.status || 'open';
+          const statusLabels = { open: '🔴 OPEN', in_progress: '🟡 IN PROGRESS', resolved: '✅ RESOLVED' };
+          const statusColors = { open: '#ef4444', in_progress: '#eab308', resolved: '#22c55e' };
+
+          // Community status-change buttons — any signed-in citizen can
+          // advance a report's status (see database.rules.json: status is a
+          // narrow sub-path writable by any authenticated user, separate
+          // from the rest of the report which stays owner-only).
+          const actionButtons = status === 'resolved'
+            ? `<p style="margin-top:8px; font-size:10px; color:#16a34a; font-weight:700;">This issue has been marked resolved by the community.</p>`
+            : `<div style="margin-top:8px; display:flex; gap:6px;">
+                 ${status === 'open' ? `<button onclick="window.updateReportStatus('${report.id}', 'in_progress')" style="flex:1; padding:5px; font-size:10px; font-weight:700; border-radius:6px; border:1px solid #eab308; background:#fef3c7; color:#92400e; cursor:pointer;">Mark In Progress</button>` : ''}
+                 <button onclick="window.updateReportStatus('${report.id}', 'resolved')" style="flex:1; padding:5px; font-size:10px; font-weight:700; border-radius:6px; border:1px solid #22c55e; background:#dcfce7; color:#15803d; cursor:pointer;">✅ Mark Resolved</button>
+               </div>`;
+
           const contextCard = `
             <div style="color:#0f172a; font-family:monospace; font-size:11px; line-height:1.4; max-width:220px;">
-              <strong style="text-transform:uppercase; color:${boundaryColor}; font-size:12px;">[${report.severity || 'LOW'}] ${report.category || ''}</strong><br/>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="text-transform:uppercase; color:${boundaryColor}; font-size:12px;">[${report.severity || 'LOW'}] ${report.category || ''}</strong>
+                <span style="font-size:9px; font-weight:700; color:${statusColors[status]};">${statusLabels[status]}</span>
+              </div>
               <span style="opacity:0.7;">Loc: ${report.location || 'MUMBAI'}</span><br/>
               <p style="margin-top:4px; font-style:italic; border-top:1px solid #ddd; padding-top:4px;">"${report.desc || ''}"</p>
               ${evidenceImg}
+              ${actionButtons}
             </div>
           `;
 
@@ -388,6 +438,95 @@
       } else {
         responseEl.className = "opacity-80 font-mono text-emerald-400";
       }
+
+      // ===== Quick local stats (no AI call needed) — instant, free =====
+      updateLocalImpactStats();
+
+      // ===== Debounced AI predictive insight =====
+      // Firebase listeners can fire repeatedly in quick succession (e.g. while
+      // many reports load on first connect) — debounce so we don't fire a
+      // fresh Gemini call on every single tiny update, just once data settles.
+      clearTimeout(insightsDebounceTimer);
+      insightsDebounceTimer = setTimeout(() => loadPredictiveInsights(), 1500);
+    }
+
+    let insightsDebounceTimer = null;
+
+    /* Local, instant stats computed directly from the live data — no AI
+       call needed for these, keeps them snappy even before Gemini responds. */
+    function updateLocalImpactStats() {
+      if (liveReportNodes.length === 0) {
+        document.getElementById("val-top-category").textContent = "—";
+        document.getElementById("val-top-hotspot").textContent = "—";
+        return;
+      }
+
+      const countBy = (key) => liveReportNodes.reduce((acc, r) => {
+        const val = r[key] || "Unknown";
+        acc[val] = (acc[val] || 0) + 1;
+        return acc;
+      }, {});
+
+      const topOf = (counts) => Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+
+      const topCategory = topOf(countBy('category'));
+      const topLocation = topOf(countBy('location'));
+
+      document.getElementById("val-top-category").textContent = topCategory ? topCategory[0] : "—";
+      document.getElementById("val-top-hotspot").textContent = topLocation ? topLocation[0] : "—";
+    }
+
+    /* Real AI call — sends the actual live report snapshot to Gemini for
+       genuine pattern analysis (trend direction + one actionable prediction). */
+    async function loadPredictiveInsights() {
+      const predictionEl = document.getElementById("val-prediction-text");
+      const trendBadge = document.getElementById("val-trend-badge");
+      const btn = document.getElementById("btn-refresh-insights");
+      const apiBase = window.API_BASE_URL || 'http://localhost:3000';
+
+      if (liveReportNodes.length === 0) {
+        predictionEl.textContent = currentLanguage === 'hi'
+          ? "पूर्वानुमान के लिए पर्याप्त डेटा उपलब्ध नहीं है।"
+          : "Not enough report data yet to generate a prediction.";
+        trendBadge.textContent = "NO DATA";
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      predictionEl.textContent = currentLanguage === 'hi'
+        ? "वास्तविक रिपोर्ट डेटा से पूर्वानुमान तैयार किया जा रहा है..."
+        : "Analyzing real report data for patterns...";
+
+      try {
+        const res = await fetch(`${apiBase}/api/predictive-insights`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reports: liveReportNodes })
+        });
+
+        if (!res.ok) throw new Error(`Server responded ${res.status}`);
+        const insights = await res.json();
+
+        predictionEl.textContent = insights.prediction || "No clear prediction available from current data.";
+
+        const trendColors = {
+          RISING: 'background:#dc2626; color:#fff;',
+          STABLE: 'background:#0891b2; color:#fff;',
+          FALLING: 'background:#16a34a; color:#fff;',
+          INSUFFICIENT_DATA: 'background:rgba(255,255,255,0.1);'
+        };
+        trendBadge.textContent = insights.trend || "—";
+        trendBadge.setAttribute('style', `padding:2px 6px; border-radius:4px; font-size:9px; font-weight:700; ${trendColors[insights.trend] || trendColors.INSUFFICIENT_DATA}`);
+
+      } catch (err) {
+        console.error("Predictive insights request failed:", err);
+        predictionEl.textContent = currentLanguage === 'hi'
+          ? "⚠️ पूर्वानुमान सेवा अनुपलब्ध — सर्वर जांचें।"
+          : "⚠️ Prediction service unavailable — is server.js running?";
+        trendBadge.textContent = "ERROR";
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     }
 
     function recenterMapToDefault() {
@@ -396,6 +535,56 @@
         mapInstance.setZoom(12);
       }
     }
+
+    /* ==========================================================================
+       COMMUNITY STATUS UPDATES
+       Any signed-in citizen can advance a report's status — matches the
+       community-verification spirit of the original pitch ("Confirm
+       resolutions"). Attached to window because the info window content is
+       injected as a raw HTML string, so its onclick handlers need a global
+       function to call, not a closure-scoped one.
+       ========================================================================== */
+    window.updateReportStatus = async function (reportId, newStatus) {
+      if (!window.db) return;
+
+      try {
+        const realUid = (typeof getAuthUid === 'function') ? await getAuthUid() : null;
+        if (!realUid) {
+          if (typeof showToast === 'function') showToast('Could not verify identity — try again in a moment.', 'warning');
+          return;
+        }
+
+        // Only the status/audit sub-paths are written here — matches the
+        // narrow write permission granted in database.rules.json. Does NOT
+        // touch category/desc/location/user, which remain owner-only.
+        await db.ref(`reports/${reportId}`).update({
+          status: newStatus,
+          statusUpdatedBy: realUid,
+          statusUpdatedAt: Date.now()
+        });
+
+        if (activeInfoWindow) activeInfoWindow.close();
+
+        if (newStatus === 'resolved') {
+          // Reward community resolution-confirmation — once per report, so a
+          // citizen can't repeatedly toggle status back and forth to farm credits.
+          if (typeof awardCreditsOncePerReport === 'function') {
+            await awardCreditsOncePerReport(realUid, 'resolution_confirm', reportId, `Confirmed resolution of report ${reportId}`);
+          }
+          if (typeof showToast === 'function') showToast('Marked as resolved — thank you for confirming!', 'success');
+        } else {
+          if (typeof showToast === 'function') showToast('Status updated to In Progress.', 'info');
+        }
+
+        // The live Firebase listener (listenToFirebaseCoordinates) will
+        // automatically redraw markers with the new status on its own —
+        // no manual refresh needed here.
+
+      } catch (err) {
+        console.error("Status update failed:", err);
+        if (typeof showToast === 'function') showToast('Could not update status — check your connection.', 'error');
+      }
+    };
 
     VanillaTilt.init(document.querySelector(".glass-tilt"), { max: 3, speed: 400, glare: true, "max-glare": 0.05 });
 
