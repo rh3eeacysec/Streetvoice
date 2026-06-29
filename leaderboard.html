@@ -25,9 +25,36 @@
     .nav-btn.active { background: var(--nav-active); color: var(--nav-active-text); font-weight: 900; border-color: var(--nav-active); }
     .podium-avatar-wrapper { width: 72px; height: 72px; overflow: hidden; position: relative; border-radius: 50%; }
     .podium-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+
+    #bg-video-layer {
+      position: fixed; inset: 0; width: 100%; height: 100%; z-index: -2; overflow: hidden;
+    }
+    #bg-video-layer video {
+      position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+      object-fit: cover; transform: translate(-50%, -50%);
+    }
+    #bg-video-overlay {
+      position: fixed; inset: 0; z-index: -1; background: var(--bg); opacity: 0.85;
+      transition: background 0.4s ease, opacity 0.4s ease; pointer-events: none;
+    }
+    [data-theme="90s"] #bg-video-overlay { opacity: 0.92; }
+    .sv-nav-link {
+      display: block; padding: 10px 14px; font-size: 12px; font-weight: 700;
+      color: var(--text); text-decoration: none; border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+    }
+    .sv-nav-link:last-child { border-bottom: none; }
+    .sv-nav-link:hover { background: rgba(255,255,255,0.08); }
   </style>
 </head>
 <body class="p-4 md:p-8 min-h-screen">
+
+  <div id="bg-video-layer">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="bg_index.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div id="bg-video-overlay"></div>
 
   <!-- Cursor and Global scripts -->
   <script src="cursor.js"></script>
@@ -36,6 +63,21 @@
     <nav class="w-full flex flex-wrap gap-2 p-2 glass-card items-center shadow-md">
       <a href="leaderboard.html" class="nav-btn active px-3 py-2 text-xs font-bold">🏆 Leaderboard</a>
       <a href="profile.html" class="nav-btn px-3 py-2 text-xs font-bold ml-auto">👤 Profile</a>
+      <div class="relative" id="sv-nav-menu-wrapper">
+        <button onclick="document.getElementById('sv-nav-menu-dropdown').classList.toggle('hidden')"
+          class="nav-btn px-3 py-2 text-lg font-black" aria-label="Navigation menu">⋯</button>
+        <div id="sv-nav-menu-dropdown" class="hidden absolute right-0 mt-2 w-56 shadow-2xl z-50 overflow-hidden glass-card">
+          <a href="index.html" class="sv-nav-link">🏠 Home</a>
+          <a href="report.html" class="sv-nav-link">📝 Report an Issue</a>
+          <a href="riskmap.html" class="sv-nav-link">🗺️ Risk Map</a>
+          <a href="dashboard.html" class="sv-nav-link">⚡ AI Quick Triage</a>
+          <a href="agents.html" class="sv-nav-link">🤖 AI Agents</a>
+          <a href="studio.html" class="sv-nav-link">🎨 Poster Studio</a>
+          <a href="feed.html" class="sv-nav-link">📰 Feed</a>
+          <a href="settings.html" class="sv-nav-link">⚙️ Settings</a>
+          <a href="about.html" class="sv-nav-link">ℹ️ About</a>
+        </div>
+      </div>
     </nav>
 
     <div class="glass-card p-4 flex items-center gap-4">
@@ -72,21 +114,21 @@
 
     function fetchDatabaseSnapshot() {
       const mockUsers = {
-        "SV-DAD-GHOSTRIDER": { city: "Dadar", streetCredits: 4250, avatar: "pfp4.png", isMock: true },
-        "NEON-SAMURAI-88": { city: "Delhi", streetCredits: 3820, avatar: "pfp7.png", isMock: true },
-        "SV-VECTOR-ALPHA": { city: "Mumbai", streetCredits: 2910, avatar: "pfp1.png", isMock: true },
-        "CYBER-PANDA-04": { city: "Bengaluru", streetCredits: 1850, avatar: "pfp3.png", isMock: true },
-        "X-MUSHROOM-MAGE": { city: "Pune", streetCredits: 920, avatar: "pfp6.png", isMock: true },
-        "VOID-RUNNER-9": { city: "Kolkata", streetCredits: 850, avatar: "pfp2.png", isMock: true },
-        "DATA-WITCH-X": { city: "Chennai", streetCredits: 700, avatar: "pfp5.png", isMock: true },
-        "GLITCH-SOUL-0": { city: "Surat", streetCredits: 620, avatar: "pfp8.png", isMock: true },
-        "PHANTOM-NODE": { city: "Jaipur", streetCredits: 500, avatar: "pfp1.png", isMock: true },
-        "SILVER-FOX-99": { city: "Indore", streetCredits: 480, avatar: "pfp3.png", isMock: true },
-        "ORBITAL-JNK": { city: "Patna", streetCredits: 410, avatar: "pfp4.png", isMock: true },
-        "SYNTH-WAVE-01": { city: "Nagpur", streetCredits: 390, avatar: "pfp6.png", isMock: true },
-        "CORE-BREAKER": { city: "Bhopal", streetCredits: 350, avatar: "pfp7.png", isMock: true },
-        "ZEN-MODERATOR": { city: "Agra", streetCredits: 300, avatar: "pfp2.png", isMock: true },
-        "NIGHT-OWL-SEC": { city: "Nashik", streetCredits: 250, avatar: "pfp8.png", isMock: true }
+        "CITIZEN-DAD-7401": { city: "Dadar", streetCredits: 4250, avatar: "pfp4.png", isMock: true },
+        "CITIZEN-DEL-1188": { city: "Delhi", streetCredits: 3820, avatar: "pfp7.png", isMock: true },
+        "CITIZEN-MUM-3320": { city: "Mumbai", streetCredits: 2910, avatar: "pfp1.png", isMock: true },
+        "CITIZEN-BLR-7704": { city: "Bengaluru", streetCredits: 1850, avatar: "pfp3.png", isMock: true },
+        "CITIZEN-PUN-5512": { city: "Pune", streetCredits: 920, avatar: "pfp6.png", isMock: true },
+        "CITIZEN-KOL-2219": { city: "Kolkata", streetCredits: 850, avatar: "pfp2.png", isMock: true },
+        "CITIZEN-CHN-8843": { city: "Chennai", streetCredits: 700, avatar: "pfp5.png", isMock: true },
+        "CITIZEN-SUR-3360": { city: "Surat", streetCredits: 620, avatar: "pfp8.png", isMock: true },
+        "CITIZEN-JAI-9015": { city: "Jaipur", streetCredits: 500, avatar: "pfp1.png", isMock: true },
+        "CITIZEN-IND-4499": { city: "Indore", streetCredits: 480, avatar: "pfp3.png", isMock: true },
+        "CITIZEN-PAT-6627": { city: "Patna", streetCredits: 410, avatar: "pfp4.png", isMock: true },
+        "CITIZEN-NAG-3301": { city: "Nagpur", streetCredits: 390, avatar: "pfp6.png", isMock: true },
+        "CITIZEN-BHO-8856": { city: "Bhopal", streetCredits: 350, avatar: "pfp7.png", isMock: true },
+        "CITIZEN-AGR-2240": { city: "Agra", streetCredits: 300, avatar: "pfp2.png", isMock: true },
+        "CITIZEN-NAS-7793": { city: "Nashik", streetCredits: 250, avatar: "pfp8.png", isMock: true }
       };
 
       async function loadRealUsers() {
@@ -121,7 +163,7 @@
         const combined = { ...mockUsers };
         Object.keys(realUsers).forEach(uid => {
           const u = realUsers[uid];
-          // Show the readable displayId (e.g. "SV-MUM-DEV-4000") set by
+          // Show the readable displayId (e.g. "CITIZEN-MUM-4821") set by
           // auth.js's linkLocalUserToAuth — NOT the raw uid key, which is a
           // long random string that means nothing to a citizen viewing this.
           const shownId = u.displayId || uid;
@@ -183,6 +225,23 @@
     window.addEventListener('DOMContentLoaded', () => {
       setGlobalEra(localStorage.getItem('streetvoice_era_theme') || 'modern');
       fetchDatabaseSnapshot();
+    });
+
+    (function () {
+      const bgVideo = document.querySelector('#bg-video-layer video');
+      if (!bgVideo) return;
+      bgVideo.addEventListener('error', () => {
+        console.warn('⚠️ Background video (bg_index.mp4) failed to load.');
+        document.getElementById('bg-video-layer').style.display = 'none';
+      });
+    })();
+
+    document.addEventListener('click', function (e) {
+      const wrapper = document.getElementById('sv-nav-menu-wrapper');
+      const dropdown = document.getElementById('sv-nav-menu-dropdown');
+      if (wrapper && dropdown && !wrapper.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
     });
   </script>
 </body>
