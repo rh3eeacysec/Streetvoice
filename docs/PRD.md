@@ -47,7 +47,7 @@ Cleaning messy multilingual speech, scoring photo evidence for severity, checkin
 
 Since this is a hackathon prototype rather than a production deployment, success is measured by functional completeness, demo reliability, and honest scope — not live user adoption:
 
-- A citizen can file a complete report end-to-end (text, voice, or photo) and see it appear on the live map within seconds
+- A citizen can file a complete report end-to-end (text, voice, video or photo) and see it appear on the live map within seconds
 - Every agent in the pipeline runs on real Gemini API calls, verifiable in server logs — not mocked or hardcoded output
 - The full loop closes: a report can move from Open → In Progress → Resolved through real community action, not just exist as a permanently-open ticket
 - The app survives a live demo without requiring a page refresh to recover from a failed network call
@@ -129,6 +129,7 @@ Being explicit about what is *not* built avoids overclaiming on submission mater
 | Priority | Item |
 |---|---|
 | High | Real email/password (or Google) login, layered on top of the existing Anonymous Auth foundation |
+|High|StreetCredits real-world value — partner with local businesses and civic bodies so earned credits can be redeemed for discounts, cashback, or community rewards. The goal: make improving your neighborhood genuinely worth something tangible, so citizens stay engaged long after a single report. High civic participation = more credits = real discounts at local shops, transit passes, or government service fee waivers. This turns StreetVoice from a reporting tool into a civic engagement loop with real personal incentive.|
 | High | Municipal department-facing dashboard for ticket management, closing the loop the community-status workaround currently fills |
 | Medium | Real generative imagery for posters, using a correctly integrated image model |
 | Medium | Rate-limiting and abuse protection in database rules |
